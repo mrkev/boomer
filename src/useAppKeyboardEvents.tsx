@@ -13,7 +13,7 @@ export function useAppKeyboardEvents(engineState: EngineState) {
 
       switch (e.key) {
         case "Backspace": {
-          console.log("BS", e.repeat);
+          // console.log("BS", e.repeat);
           if (selection.state !== "engine-object") {
             return;
           }
@@ -23,7 +23,7 @@ export function useAppKeyboardEvents(engineState: EngineState) {
           break;
         }
         default:
-          console.log("key", e.key);
+        // console.log("key", e.key);
       }
     };
 

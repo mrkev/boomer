@@ -86,16 +86,16 @@ export function useAppMouseCursor() {
       }
     };
     const mouseUpHandler = function () {
-      console.log("mouse up");
+      // console.log("mouse up");
       switch (cursor.state) {
         case "idle":
           break;
         case "transforming":
-          console.log("FINISHED TRANSFORM");
+          // console.log("FINISHED TRANSFORM");
           setCursor({ state: "idle" });
           break;
         case "moving":
-          console.log("FINISHED MOVE");
+          // console.log("FINISHED MOVE");
           setCursor({ state: "idle" });
           break;
         default:

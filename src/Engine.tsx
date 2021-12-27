@@ -1,9 +1,11 @@
 export class Tiles {
+  readonly url: string;
   readonly img: HTMLImageElement;
   readonly spriteSize: number;
   readonly length: number;
 
-  constructor(img: HTMLImageElement, spriteSize: number) {
+  constructor(url: string, img: HTMLImageElement, spriteSize: number) {
+    this.url = url;
     this.img = img;
     this.spriteSize = spriteSize;
     this.length = (img.width / spriteSize) * (img.height / spriteSize);
@@ -19,12 +21,19 @@ export class Tiles {
     return new Promise((res) => {
       const img = document.createElement("img");
       img.onload = function () {
-        res(new Tiles(img, spriteSize));
+        res(new Tiles(url, img, spriteSize));
       };
       // triggers onload event (after it loads of course)
       // img.src = "//via.placeholder.com/350x150";
       img.src = url;
     });
+  }
+
+  __getSerialRepresentation() {
+    return {
+      url: this.url,
+      spriteSize: this.spriteSize,
+    };
   }
 
   drawSprite(
@@ -66,9 +75,13 @@ export class Tiles {
       this.spriteSize
     );
 
-    return new Sprite(image);
+    const url = this.url + "@" + num;
+
+    return new Sprite(image, url);
   }
 }
+
+// TODO: rename __getSerialRepresentation() to __getSerializableRepresentation
 
 export abstract class EngineObject {
   x: number = 0;
@@ -78,6 +91,34 @@ export abstract class EngineObject {
   abstract paintToContext(ctx: CanvasRenderingContext2D): void;
   _proxyForScripting = new ProxyForScripting(this);
   _script: string = "this.onClick(() => { this.x = 0; });";
+
+  __getEOSerializableRepresentation(): Record<string, any> {
+    const { x, y, width, height, _script } = this;
+    return { x, y, width, height, _script };
+  }
+
+  // __getSerialRepresentation() {
+  //   const result: Record<string, unknown> = {};
+  //   for (const key in this) {
+  //     // by default don't serialize properties that start with "_"
+  //     if (key[0] === "_") {
+  //       continue;
+  //     }
+
+  //     const val: any = this[key];
+
+  //     if (
+  //       typeof val === "object" &&
+  //       typeof val.__getSerialRepresentation === "function"
+  //     ) {
+  //       result[key] = val.__getSerialRepresentation();
+  //     } else {
+  //       result[key] = val;
+  //     }
+  //   }
+
+  //   return result;
+  // }
 }
 
 /**
@@ -98,14 +139,22 @@ export class ProxyForScripting {
     this.#clickHandlers.push(cb);
   }
 
+  onFrame(cb: () => void) {
+    console.log("SETTING OF", cb);
+    this.#frameHandlers.push(cb);
+  }
+
   triggerClick() {
     for (const handler of this.#clickHandlers) {
-      handler();
+      handler.call(this);
     }
   }
 
-  onFrame(cb: () => void) {
-    this.#frameHandlers.push(cb);
+  triggerFrame() {
+    for (const handler of this.#frameHandlers) {
+      console.log("running", handler);
+      handler.call(this);
+    }
   }
 
   get x() {
@@ -118,10 +167,10 @@ export class ProxyForScripting {
 }
 
 export class Box extends EngineObject {
-  x: number = 0;
-  y: number = 0;
-  width: number;
-  height: number;
+  override x: number = 0;
+  override y: number = 0;
+  override width: number;
+  override height: number;
   color: string;
 
   constructor({
@@ -151,36 +200,32 @@ export class Box extends EngineObject {
   }
 }
 
-type Transform = [number, number, number, number, number, number];
-
-const ENTITY_TRANSFORM = (): Transform => [1, 0, 0, 1, 0, 0];
-
 export class Sprite extends EngineObject {
-  x: number = 0;
-  y: number = 0;
-  width: number;
-  height: number;
-  image: ImageBitmap;
+  override x: number = 0;
+  override y: number = 0;
+  override width: number;
+  override height: number;
+  private image: ImageBitmap;
+  private imageUrl: string;
 
-  transform: Transform = ENTITY_TRANSFORM();
-
-  private engineState: EngineState | null = null;
-
-  constructor(image: ImageBitmap) {
+  constructor(image: ImageBitmap, imageUrl: string) {
     super();
     this.image = image;
     this.width = image.width;
     this.height = image.height;
-  }
-
-  attatchToState(engine: EngineState) {
-    this.engineState = engine;
+    this.imageUrl = imageUrl;
   }
 
   paintToContext(ctx: CanvasRenderingContext2D) {
-    ctx.transform(...this.transform);
     ctx.drawImage(this.image, this.x, this.y);
-    ctx.transform(...ENTITY_TRANSFORM());
+  }
+
+  __getSerialRepresentation() {
+    const result = this.__getEOSerializableRepresentation();
+    const { imageUrl } = this;
+    result.imageUrl = imageUrl;
+
+    return result;
   }
 }
 
@@ -210,9 +255,10 @@ export class EngineState {
       art.paintToContext(ctx);
     });
   }
-}
 
-export function dispatchClickEvent(engineState: EngineState, eo: EngineObject) {
-  console.log("TODO: run click events");
-  eo._proxyForScripting.triggerClick();
+  __getSerialRepresentation() {
+    return {
+      objects: [...this.objects],
+    };
+  }
 }

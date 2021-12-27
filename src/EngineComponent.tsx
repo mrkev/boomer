@@ -64,14 +64,19 @@ export function EngineComponent({
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
-    if (mode === "editing") {
+    if (mode === "editing" || canvasRef.current == null) {
       return;
-    } else {
+    }
+    // On RUN
+    else {
       console.log("todo: intialize objects");
       for (const eo of engineState.objects) {
         eo._proxyForScripting = new ProxyForScripting(eo);
-        const script = new Function("console", eo._script);
-        script.call(eo._proxyForScripting, console);
+        const script = new Function("console", "frame", eo._script);
+        script.call(eo._proxyForScripting, console, {
+          width: canvasRef.current.width,
+          height: canvasRef.current.height,
+        });
         console.log("initialized", eo);
       }
     }
@@ -91,21 +96,31 @@ export function EngineComponent({
     // ctx.lineWidth = thickness * pixelRatio;
     let raf = requestAnimationFrame(function gameLoop() {
       engineState.render(ctx, canvas.width, canvas.height);
+      if (mode === "running") {
+        dispatchFrameEventToAll(engineState);
+      }
       raf = requestAnimationFrame(gameLoop);
     });
     return () => {
       cancelAnimationFrame(raf);
     };
-  }, [engineState]);
+  }, [engineState, mode]);
 
   const onEngineClick = useCallback(
     (e: React.MouseEvent) => {
-      if (!onClick) {
+      const canvas = canvasRef.current;
+      if (!canvas) {
         return;
       }
 
-      const canvas = canvasRef.current;
-      if (!canvas) {
+      if (mode === "running") {
+        const [x, y] = getEventCanvasCoordinates(canvas, e);
+        const clickedSprite = getSpriteAtCoords(engineState, [x, y]);
+        clickedSprite && dispatchClickEvent(engineState, clickedSprite);
+        return;
+      }
+
+      if (!onClick) {
         return;
       }
 
@@ -113,17 +128,21 @@ export function EngineComponent({
       const clickedSprite = getSpriteAtCoords(engineState, [x, y]);
       onClick({ x, y, sprite: clickedSprite, nativeEvent: e.nativeEvent });
     },
-    [engineState, onClick]
+    [engineState, mode, onClick]
   );
 
   const onEngineMouseDown = useCallback(
     (e: React.MouseEvent) => {
-      if (!onMouseDown) {
+      const canvas = canvasRef.current;
+      if (!canvas) {
         return;
       }
 
-      const canvas = canvasRef.current;
-      if (!canvas) {
+      if (mode === "running") {
+        return;
+      }
+
+      if (!onMouseDown) {
         return;
       }
 
@@ -136,12 +155,16 @@ export function EngineComponent({
 
   const onEngineMouseUp = useCallback(
     (e: React.MouseEvent) => {
-      if (!onMouseUp) {
+      const canvas = canvasRef.current;
+      if (!canvas) {
         return;
       }
 
-      const canvas = canvasRef.current;
-      if (!canvas) {
+      if (mode === "running") {
+        return;
+      }
+
+      if (!onMouseUp) {
         return;
       }
 
@@ -185,4 +208,15 @@ export function EngineComponent({
       onContextMenu={function () {}}
     ></canvas>
   );
+}
+
+export function dispatchClickEvent(engineState: EngineState, eo: EngineObject) {
+  console.log("TODO: run click events");
+  eo._proxyForScripting.triggerClick();
+}
+
+function dispatchFrameEventToAll(engineState: EngineState) {
+  for (const eo of engineState.objects) {
+    eo._proxyForScripting.triggerFrame();
+  }
 }

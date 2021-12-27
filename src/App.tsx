@@ -1,15 +1,8 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import Editor, { OnChange, OnMount } from "@monaco-editor/react";
+import Editor, { BeforeMount, OnChange, OnMount } from "@monaco-editor/react";
 
 import "./App.css";
-import {
-  Tiles,
-  EngineState,
-  Sprite,
-  Box,
-  EngineObject,
-  dispatchClickEvent,
-} from "./Engine";
+import { Tiles, EngineState, Sprite, Box, EngineObject } from "./Engine";
 import { EngineComponent, EngineMouseEvent } from "./EngineComponent";
 import { useAtom } from "jotai";
 import {
@@ -20,12 +13,15 @@ import {
 } from "./AppState";
 import { mapSet } from "./mapSet";
 import { useAppKeyboardEvents } from "./useAppKeyboardEvents";
+import type { editor } from "monaco-editor";
+import { deserialize, serialize } from "./Document";
 
 export default function App() {
   const [selection, setSelection] = useAtom(selectionState);
   const [tiles, setTiles] = useState<Tiles | null>(null);
-  const [engineState] = useState(new EngineState());
+  const [engineState, setEngineState] = useState(new EngineState());
   const [mode, setMode] = useAtom(modeState);
+  const [serializationResult, setSerializationResult] = useState("");
   const [cursorBox] = useState(() => {
     const box = new Box({ width: 10, height: 10 });
     engineState.addSprite(box);
@@ -51,22 +47,16 @@ export default function App() {
     async function loadTiles() {
       const tiles = await Tiles.from({ url: "/sprites.png", spriteSize: 32 });
       setTiles(tiles);
-      console.log("SET TILES");
-      const sprite = await tiles.genSprite((Math.random() * 100) >> 0);
-      sprite.x = (Math.random() * 100) >> 0;
-      sprite.y = (Math.random() * 100) >> 0;
-      engineState.addSprite(sprite);
+      // const sprite = await tiles.genSprite((Math.random() * 100) >> 0);
+      // sprite.x = (Math.random() * 100) >> 0;
+      // sprite.y = (Math.random() * 100) >> 0;
+      // engineState.addSprite(sprite);
+      // console.log("HEREEE");
     }
     loadTiles();
   }, [engineState]);
 
   const selectSprite = function (sprite: Sprite | null) {
-    if (mode.state === "running") {
-      sprite && dispatchClickEvent(engineState, sprite);
-      return;
-    }
-    // addRandomTile();
-    // console.log(sprite);
     if (sprite) {
       setSelection({ state: "engine-object", eo: sprite });
     } else {
@@ -78,10 +68,6 @@ export default function App() {
     sprite,
     nativeEvent: ne,
   }: EngineMouseEvent) {
-    if (!tiles) {
-      return;
-    }
-
     selectSprite(sprite);
 
     if (sprite) {
@@ -94,9 +80,52 @@ export default function App() {
     }
   };
 
+  useEffect(() => {
+    (async function run() {
+      const result = await deserialize(serializationResult);
+      console.log("deserialize", result);
+    })();
+  }, [serializationResult]);
+
+  const doSave = () => {
+    if (!tiles) {
+      return;
+    }
+    const serialized = serialize({
+      engineState,
+      tiles,
+    });
+    localStorage.setItem("boomer-doc", serialized);
+    localStorage.setItem("boomer-doc-exists", "1");
+  };
+
+  const doLoad = () => {
+    (async function run() {
+      const str = localStorage.getItem("boomer-doc");
+      if (!str) {
+        return;
+      }
+      const doc = await deserialize(str);
+      if (doc instanceof Error) {
+        console.error(doc);
+        return;
+      }
+
+      setTiles(doc.tiles);
+      setEngineState(doc.engineState);
+    })();
+  };
+
   return (
     <div className="App">
       <div style={{ display: "flex", flexDirection: "row" }}>
+        <button onClick={doSave}>Save</button>
+        <button
+          onClick={doLoad}
+          disabled={localStorage.getItem("boomer-doc-exists") == null}
+        >
+          Load
+        </button>
         <button
           onClick={() => {
             if (mode.state === "editing") {
@@ -109,8 +138,8 @@ export default function App() {
           {mode.state === "running" ? "Running" : "Editing"}
         </button>
         <button onClick={() => addRandomTile()}>Add random tile</button>
-        <pre>{JSON.stringify(cursor)}</pre>
       </div>
+      <pre>{JSON.stringify(cursor)}</pre>
 
       <div style={{ display: "flex", flexDirection: "row" }}>
         <div
@@ -169,6 +198,7 @@ export default function App() {
       {selection.state === "engine-object" && (
         <PropsEditor engineObject={selection.eo} />
       )}
+      <pre>{serializationResult}</pre>
     </div>
   );
 }
@@ -258,14 +288,30 @@ function PropsEditor({ engineObject: eo }: { engineObject: EngineObject }) {
     <div style={{ display: "flex", flexDirection: "row" }}>
       <CodeEditor engineObject={eo} />
       <pre>
-        {eo.constructor.name} {JSON.stringify(eo, null, 2)}
+        {eo.constructor.name}{" "}
+        {JSON.stringify(
+          eo,
+          (key, value) => {
+            if (key[0] === "_") {
+              return undefined;
+            } else {
+              return value;
+            }
+          },
+          2
+        )}
       </pre>
     </div>
   );
 }
 
 function CodeEditor({ engineObject: eo }: { engineObject: EngineObject }) {
-  const editorRef = useRef(null);
+  const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
+  const handleEditorWillMount: BeforeMount = function (monaco) {
+    monaco.languages.typescript.javascriptDefaults.addExtraLib(`
+    declare const frame: {width: number, height: number};
+    `);
+  };
 
   const handleEditorDidMount: OnMount = function (editor, monaco) {
     // here is the editor instance
@@ -279,23 +325,13 @@ function CodeEditor({ engineObject: eo }: { engineObject: EngineObject }) {
 
   return (
     <Editor
+      width={700}
       height="90vh"
       defaultLanguage="javascript"
       defaultValue={eo._script}
+      beforeMount={handleEditorWillMount}
       onMount={handleEditorDidMount}
       onChange={handleEditorChange}
     />
   );
 }
-
-/**
-
-
-
-this.addEventListener(function () {
-  this.
-
-})
-
-
- */
