@@ -26,8 +26,3 @@ export class Serializer<T extends Record<string, unknown>> {
     return "";
   }
 }
-class Dog {
-  x: number = 0;
-  y: number = 0;
-  static serializer: Serializer<Dog> = new Serializer<Dog>(() => {});
-}

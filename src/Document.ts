@@ -1,6 +1,6 @@
 import { EngineObject, EngineState, Sprite, Tiles } from "./Engine";
 
-class Doc_V1 {
+export class Doc_V1 {
   engineState: EngineState;
   tiles: Tiles;
   constructor({
@@ -21,19 +21,12 @@ class Doc_V1 {
   }
 }
 
-export function serialize({
-  engineState,
-  tiles,
-  pretty = false,
-}: {
-  engineState: EngineState;
-  tiles: Tiles;
-  pretty?: boolean;
-}) {
-  const doc = new Doc_V1({ engineState, tiles });
-
+export function serializeDoc(doc: Doc_V1, pretty?: boolean) {
+  return serialize(doc, pretty);
+}
+export function serialize(obj: unknown, pretty?: boolean) {
   return JSON.stringify(
-    doc,
+    obj,
     (_, value) => {
       if (Array.isArray(value)) {
         return value;
@@ -77,7 +70,7 @@ export async function deserialize(str: string): Promise<Doc_V1 | Error> {
   }
 }
 
-const hydrateFor = {
+export const hydrateFor = {
   Doc_V1: async (value: any): Promise<Doc_V1> => {
     const tiles = await hydrateFor.Tiles(value.tiles);
     const engineState = await hydrateFor.EngineState(value.engineState, tiles);

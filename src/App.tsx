@@ -2,35 +2,27 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import Editor, { BeforeMount, OnChange, OnMount } from "@monaco-editor/react";
 
 import "./App.css";
-import { Tiles, EngineState, Sprite, Box, EngineObject } from "./Engine";
+import { Tiles, EngineState, Sprite, EngineObject } from "./Engine";
 import { EngineComponent, EngineMouseEvent } from "./EngineComponent";
 import { useAtom } from "jotai";
-import {
-  cursorState,
-  modeState,
-  selectionState,
-  useAppMouseCursor,
-} from "./AppState";
+import { cursorState, modeState, selectionState } from "./AppState";
+import { useAppMouseCursor } from "./useAppMouseCursor";
 import { mapSet } from "./mapSet";
 import { useAppKeyboardEvents } from "./useAppKeyboardEvents";
 import type { editor } from "monaco-editor";
-import { deserialize, serialize } from "./Document";
+import { deserialize, Doc_V1, serializeDoc } from "./Document";
+
+const CANVAS_SIZE: [number, number] = [300, 150];
 
 export default function App() {
   const [selection, setSelection] = useAtom(selectionState);
   const [tiles, setTiles] = useState<Tiles | null>(null);
   const [engineState, setEngineState] = useState(new EngineState());
   const [mode, setMode] = useAtom(modeState);
-  const [serializationResult, setSerializationResult] = useState("");
-  const [cursorBox] = useState(() => {
-    const box = new Box({ width: 10, height: 10 });
-    engineState.addSprite(box);
-    return box;
-  });
   const [cursor, setCursor] = useAtom(cursorState);
 
-  useAppMouseCursor();
-  useAppKeyboardEvents(engineState);
+  useAppMouseCursor(engineState, CANVAS_SIZE);
+  useAppKeyboardEvents(engineState, tiles);
 
   const addRandomTile = useCallback(async () => {
     if (!tiles) {
@@ -67,6 +59,8 @@ export default function App() {
   const engineMouseDown = function ({
     sprite,
     nativeEvent: ne,
+    x,
+    y,
   }: EngineMouseEvent) {
     selectSprite(sprite);
 
@@ -77,24 +71,22 @@ export default function App() {
         clientStart: [ne.clientX, ne.clientY],
         engineObject: sprite,
       });
+    } else {
+      setCursor({
+        state: "selecting",
+        canvasStart: [x, y],
+        clientStart: [ne.clientX, ne.clientY],
+        size: [0, 0],
+      });
     }
   };
-
-  useEffect(() => {
-    (async function run() {
-      const result = await deserialize(serializationResult);
-      console.log("deserialize", result);
-    })();
-  }, [serializationResult]);
 
   const doSave = () => {
     if (!tiles) {
       return;
     }
-    const serialized = serialize({
-      engineState,
-      tiles,
-    });
+    const doc = new Doc_V1({ engineState, tiles });
+    const serialized = serializeDoc(doc);
     localStorage.setItem("boomer-doc", serialized);
     localStorage.setItem("boomer-doc-exists", "1");
   };
@@ -145,27 +137,28 @@ export default function App() {
         <div
           style={{
             position: "relative",
-            border: mode.state === "running" ? "3px red solid" : undefined,
+            border:
+              mode.state === "running" ? "3px red solid" : "1px solid grey",
+            marginLeft: 200,
           }}
         >
           <EngineComponent
+            size={CANVAS_SIZE}
             state={engineState}
             // todo: rename sprite to object
             onMouseDown={engineMouseDown}
-            onMouseMove={function ({ x, y }) {
-              cursorBox.x = x;
-              cursorBox.y = y;
-            }}
             mode={mode.state}
           />
           {selection.state === "engine-object" && mode.state === "editing" && (
             <TransformBox engineObject={selection.eo} />
           )}
+          {cursor.state === "selecting" && <SelectionBox />}
         </div>
         <div
           style={{
             display: "flex",
             flexDirection: "column",
+            flexGrow: 1,
           }}
         >
           LAYERS
@@ -198,8 +191,39 @@ export default function App() {
       {selection.state === "engine-object" && (
         <PropsEditor engineObject={selection.eo} />
       )}
-      <pre>{serializationResult}</pre>
     </div>
+  );
+}
+
+function SelectionBox() {
+  const [cursor] = useAtom(cursorState);
+
+  if (cursor.state !== "selecting") {
+    return null;
+  }
+
+  let [width, height] = cursor.size;
+  let [left, top] = cursor.canvasStart;
+  if (width < 0) {
+    [left, width] = [left + width, Math.abs(width)];
+  }
+  if (height < 0) {
+    [top, height] = [top + height, Math.abs(height)];
+  }
+
+  return (
+    <div
+      style={{
+        position: "absolute",
+        border: "1px solid white",
+        width: width * devicePixelRatio,
+        height: height * devicePixelRatio,
+        top: top * devicePixelRatio,
+        left: left * devicePixelRatio,
+        boxSizing: "border-box",
+        background: "rgba(99, 99, 255, 0.5)",
+      }}
+    ></div>
   );
 }
 
@@ -313,13 +337,13 @@ function CodeEditor({ engineObject: eo }: { engineObject: EngineObject }) {
     `);
   };
 
-  const handleEditorDidMount: OnMount = function (editor, monaco) {
+  const handleEditorDidMount: OnMount = function (editor) {
     // here is the editor instance
     // you can store it in `useRef` for further usage
     editorRef.current = editor;
   };
 
-  const handleEditorChange: OnChange = (value, event) => {
+  const handleEditorChange: OnChange = (value) => {
     eo._script = value || "";
   };
 

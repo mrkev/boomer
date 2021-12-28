@@ -1,3 +1,5 @@
+import { serialize } from "./Document";
+
 export class Tiles {
   readonly url: string;
   readonly img: HTMLImageElement;
@@ -226,6 +228,14 @@ export class Sprite extends EngineObject {
     result.imageUrl = imageUrl;
 
     return result;
+  }
+
+  toClipboardData(): ClipboardItem {
+    const str = serialize(this);
+    const bytes = new TextEncoder().encode(str);
+    const type = "text/plain";
+    const blob = new Blob([bytes], { type });
+    return new ClipboardItem({ [type]: blob });
   }
 }
 

@@ -53,6 +53,7 @@ export function EngineComponent({
   onMouseUp,
   onMouseMove,
   mode,
+  size,
 }: {
   state: EngineState;
   onClick?: (evt: EngineMouseEvent) => void;
@@ -60,6 +61,7 @@ export function EngineComponent({
   onMouseUp?: (evt: EngineMouseEvent) => void;
   onMouseMove?: (evt: { x: number; y: number }) => void;
   mode: "editing" | "running";
+  size: [number, number];
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -195,8 +197,8 @@ export function EngineComponent({
 
   return (
     <canvas
-      width={300}
-      height={150}
+      width={size[0]}
+      height={size[1]}
       style={{
         width: "600px",
         height: "300px",
