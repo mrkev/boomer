@@ -11,6 +11,7 @@ import { mapSet } from "./mapSet";
 import { useAppKeyboardEvents } from "./useAppKeyboardEvents";
 import type { editor } from "monaco-editor";
 import { deserialize, Doc_V1, serializeDoc } from "./Document";
+import { minSpanningRect } from "./Rect";
 
 const CANVAS_SIZE: [number, number] = [300, 150];
 
@@ -48,9 +49,9 @@ export default function App() {
     loadTiles();
   }, [engineState]);
 
-  const selectSprite = function (sprite: Sprite | null) {
+  const selectSingleSprite = function (sprite: Sprite | null) {
     if (sprite) {
-      setSelection({ state: "engine-object", eo: sprite });
+      setSelection({ state: "engine-object", eos: [sprite] });
     } else {
       setSelection({ state: "idle" });
     }
@@ -62,14 +63,13 @@ export default function App() {
     x,
     y,
   }: EngineMouseEvent) {
-    selectSprite(sprite);
+    selectSingleSprite(sprite);
 
     if (sprite) {
       setCursor({
         state: "moving",
-        eoStart: [sprite.x, sprite.y],
         clientStart: [ne.clientX, ne.clientY],
-        engineObject: sprite,
+        engineObjectTransforms: [{ eo: sprite, start: [sprite.x, sprite.y] }],
       });
     } else {
       setCursor({
@@ -139,7 +139,7 @@ export default function App() {
             position: "relative",
             border:
               mode.state === "running" ? "3px red solid" : "1px solid grey",
-            marginLeft: 200,
+            marginLeft: 10,
           }}
         >
           <EngineComponent
@@ -150,7 +150,7 @@ export default function App() {
             mode={mode.state}
           />
           {selection.state === "engine-object" && mode.state === "editing" && (
-            <TransformBox engineObject={selection.eo} />
+            <TransformBox engineObjects={selection.eos} />
           )}
           {cursor.state === "selecting" && <SelectionBox />}
         </div>
@@ -169,7 +169,7 @@ export default function App() {
             }
 
             const isSelected =
-              selection.state === "engine-object" && selection.eo === eo;
+              selection.state === "engine-object" && selection.eos.includes(eo);
 
             return (
               <div
@@ -179,7 +179,7 @@ export default function App() {
                   cursor: "pointer",
                 }}
                 onClick={() => {
-                  selectSprite(isSelected ? null : eo);
+                  selectSingleSprite(isSelected ? null : eo);
                 }}
               >
                 Sprite {i}
@@ -188,8 +188,8 @@ export default function App() {
           })}
         </div>
       </div>
-      {selection.state === "engine-object" && (
-        <PropsEditor engineObject={selection.eo} />
+      {selection.state === "engine-object" && selection.eos.length === 1 && (
+        <PropsEditor engineObject={selection.eos[0]} />
       )}
     </div>
   );
@@ -229,27 +229,30 @@ function SelectionBox() {
 
 type TransformHandle = "tr" | "tl" | "br" | "bl";
 
-function TransformBox({ engineObject: eo }: { engineObject: EngineObject }) {
+function TransformBox({
+  engineObjects: eos,
+}: {
+  engineObjects: Array<EngineObject>;
+}) {
   const [cursor, setCursor] = useAtom(cursorState);
+  const eosRects = eos.map((eo) => [eo.x, eo.y, eo.width, eo.height] as const);
+  const minRect = minSpanningRect(eosRects);
 
-  useEffect(function () {
-    return function () {};
-  }, []);
+  if (minRect === null) {
+    return null;
+  }
 
-  const startResize = (handle: "tr" | "tl" | "br" | "bl") => {
-    console.log("MOUSE DOWN");
-    setCursor({ state: "transforming", engineObject: eo });
-  };
+  const [x, y, width, height] = minRect;
 
   return (
     <div
       style={{
         position: "absolute",
         border: "3px dashed white",
-        width: eo.width * devicePixelRatio,
-        height: eo.height * devicePixelRatio,
-        top: eo.y * devicePixelRatio,
-        left: eo.x * devicePixelRatio,
+        width: width * devicePixelRatio,
+        height: height * devicePixelRatio,
+        top: y * devicePixelRatio,
+        left: x * devicePixelRatio,
         boxSizing: "border-box",
         background: "rgba(99, 99, 255, 0.5)",
         // grabbing is set on useAppMouseCursor
@@ -258,9 +261,11 @@ function TransformBox({ engineObject: eo }: { engineObject: EngineObject }) {
       onMouseDown={(e: React.MouseEvent) =>
         setCursor({
           state: "moving",
-          eoStart: [eo.x, eo.y],
           clientStart: [e.clientX, e.clientY],
-          engineObject: eo,
+          engineObjectTransforms: eos.map((eo) => ({
+            eo,
+            start: [eo.x, eo.y],
+          })),
         })
       }
     >
@@ -292,16 +297,7 @@ function TransformBox({ engineObject: eo }: { engineObject: EngineObject }) {
           default:
             break;
         }
-        return (
-          <div
-            key={pos}
-            style={style}
-            onMouseDown={(e: React.MouseEvent) => {
-              e.stopPropagation();
-              startResize(pos);
-            }}
-          ></div>
-        );
+        return <div key={pos} style={style}></div>;
       })}
     </div>
   );

@@ -2,13 +2,20 @@ import { EngineState } from "./Engine";
 import { useAtom } from "jotai";
 import { useEffect } from "react";
 import { vdiv, vsub, vadd, vfloor } from "./Vector";
-import { cursorState, modeState, exhaustiveSwitch } from "./AppState";
+import {
+  cursorState,
+  modeState,
+  exhaustiveSwitch,
+  selectionState,
+} from "./AppState";
+import { rectSubset } from "./Rect";
 
 export function useAppMouseCursor(
   engineState: EngineState,
   canvasSize: [number, number]
 ) {
   const [cursor, setCursor] = useAtom(cursorState);
+  const [_, setSelection] = useAtom(selectionState);
   const [mode] = useAtom(modeState);
 
   useEffect(() => {
@@ -43,15 +50,17 @@ export function useAppMouseCursor(
           console.log("TRANSFORMING");
           break;
         case "moving": {
-          const { eoStart, clientStart, engineObject } = cursor;
+          const { clientStart, engineObjectTransforms: engineObjects } = cursor;
           const delta = vdiv(
             vsub([e.clientX, e.clientY], clientStart),
             devicePixelRatio
           );
-          const [x, y] = vadd(eoStart, vfloor(delta));
 
-          engineObject.x = x;
-          engineObject.y = y;
+          for (const { eo, start } of engineObjects) {
+            const [x, y] = vadd(start, vfloor(delta));
+            eo.x = x;
+            eo.y = y;
+          }
           break;
         }
         case "selecting": {
@@ -99,12 +108,25 @@ export function useAppMouseCursor(
             );
             if (isInsideSelection) {
               selectedObjects.push(eo);
-              console.log("isInsideSelection", eo);
             }
           }
 
-          // setSelection({state: 'engine-objects', eos: []})
+          setSelection({ state: "engine-object", eos: selectedObjects });
           console.log("SET IDLE");
+          setCursor({ state: "idle" });
+          break;
+        default:
+          exhaustiveSwitch(cursor);
+      }
+    };
+
+    const contextMenuHandler = function () {
+      switch (cursor.state) {
+        case "idle":
+          break;
+        case "transforming":
+        case "moving":
+        case "selecting":
           setCursor({ state: "idle" });
           break;
         default:
@@ -114,29 +136,11 @@ export function useAppMouseCursor(
 
     window.addEventListener("mousemove", mouseMoveHandler);
     window.addEventListener("mouseup", mouseUpHandler);
+    window.addEventListener("contextmenu", contextMenuHandler);
     return () => {
       window.removeEventListener("mousemove", mouseMoveHandler);
       window.removeEventListener("mouseup", mouseUpHandler);
+      window.removeEventListener("contextmenu", contextMenuHandler);
     };
-  }, [canvasSize, cursor, engineState, mode.state, setCursor]);
-}
-
-function rectSubset(
-  inner: [number, number, number, number],
-  outer: [number, number, number, number]
-) {
-  const [ix, iy, iw, ih] = inner;
-  const [ox, oy, ow, oh] = outer;
-  const xtest = ix > ox && ix + iw < ox + ow;
-  const ytest = iy > oy && iy + ih < oy + oh;
-  console.log(
-    "i",
-    [ix, iy, iw, ih],
-    xtest && ytest ? "inside" : "outside",
-    "o",
-    [ox, oy, ow, oh],
-    xtest,
-    ytest
-  );
-  return ix > ox && ix + iw < ox + ow && iy > oy && iy + ih < oy + oh;
+  }, [canvasSize, cursor, engineState, mode.state, setCursor, setSelection]);
 }

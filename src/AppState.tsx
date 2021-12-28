@@ -1,14 +1,18 @@
 import { EngineObject } from "./Engine";
 import { atom } from "jotai";
 
+type DraftTransform = {
+  eo: EngineObject;
+  start: [number, number];
+};
+
 type CursorState =
   | { state: "idle" }
   | { state: "transforming"; engineObject: EngineObject }
   | {
       state: "moving";
-      eoStart: [number, number];
       clientStart: [number, number];
-      engineObject: EngineObject;
+      engineObjectTransforms: Array<DraftTransform>;
     }
   | {
       state: "selecting";
@@ -23,8 +27,7 @@ export const cursorState = atom<CursorState>({
 
 type SelectionState =
   | { state: "idle" }
-  | { state: "engine-object"; eo: EngineObject }
-  | { state: "engine-objects"; eos: Array<EngineObject> };
+  | { state: "engine-object"; eos: Array<EngineObject> };
 
 export const selectionState = atom<SelectionState>({
   state: "idle",

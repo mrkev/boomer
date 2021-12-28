@@ -26,9 +26,10 @@ export function useAppKeyboardEvents(
           if (selection.state !== "engine-object") {
             return;
           }
-          const eo = selection.eo;
-          engineState.removeSprite(eo);
-          setSelection({ state: "idle" });
+          for (const eo of selection.eos) {
+            engineState.removeSprite(eo);
+            setSelection({ state: "idle" });
+          }
           break;
         }
 
@@ -38,9 +39,10 @@ export function useAppKeyboardEvents(
           }
           if (
             selection.state === "engine-object" &&
-            selection.eo instanceof Sprite
+            // TODO: Copy multiple items
+            selection.eos[0] instanceof Sprite
           ) {
-            const dataToCopy = [selection.eo.toClipboardData()];
+            const dataToCopy = [selection.eos[0].toClipboardData()];
             navigator.clipboard.write(dataToCopy);
           }
           break;
@@ -67,7 +69,7 @@ export function useAppKeyboardEvents(
                 }
                 const sprite = await hydrateFor.Sprite(json, tiles);
                 engineState.addSprite(sprite);
-                setSelection({ state: "engine-object", eo: sprite });
+                setSelection({ state: "engine-object", eos: [sprite] });
                 // TODO: Select this sprite
               } catch (e) {
                 break;
