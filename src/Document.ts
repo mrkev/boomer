@@ -106,7 +106,13 @@ export const hydrateFor = {
   },
 
   Sprite: async (value: any, tiles: Tiles): Promise<Sprite> => {
-    const { x, y, width, height, imageUrl, _script } = value;
+    const { $type, x, y, width, height, id, imageUrl, _script, ...missing } =
+      value;
+    assert(
+      $type === "Sprite",
+      `attempting to hydrate non-sprite as Sprite. Type is ${$type}`
+    );
+
     const [url, numStr] = imageUrl.split("@");
     const num = parseInt(numStr);
 
@@ -119,11 +125,18 @@ export const hydrateFor = {
     }
 
     const sprite = await tiles.genSprite(num);
+    // TODO: is there a way to ensure this is exhaustive?
     sprite.x = x;
     sprite.y = y;
     sprite.width = width;
     sprite.height = height;
     sprite._script = _script;
+    sprite.id = id;
+
+    if (Object.keys(missing).length) {
+      console.warn("Sprite: Didn't hydrate", missing);
+    }
+
     return sprite;
   },
 } as const;

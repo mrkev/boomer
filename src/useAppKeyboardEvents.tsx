@@ -1,14 +1,84 @@
-import { useEffect } from "react";
+import { Key, useEffect } from "react";
 import { EngineState, Sprite, Tiles } from "./Engine";
 import { useAtom } from "jotai";
-import { selectionState } from "./AppState";
+import { modeState, selectionState } from "./AppState";
 import { hydrateFor } from "./Document";
+
+export const pressedKeySet: Set<string> = new Set();
+
+function getModifierKeyStrings(e: KeyboardEvent): string[] {
+  const result = [];
+  if (e.metaKey) {
+    result.push("meta");
+    if (e.location === KeyboardEvent.DOM_KEY_LOCATION_LEFT) {
+      result.push("meta-left");
+    }
+    if (e.location === KeyboardEvent.DOM_KEY_LOCATION_LEFT) {
+      result.push("meta-right");
+    }
+  }
+  if (e.ctrlKey) {
+    result.push("ctrl");
+    if (e.location === KeyboardEvent.DOM_KEY_LOCATION_LEFT) {
+      result.push("ctrl-left");
+    }
+    if (e.location === KeyboardEvent.DOM_KEY_LOCATION_LEFT) {
+      result.push("ctrl-right");
+    }
+  }
+  if (e.shiftKey) {
+    result.push("shfit");
+    if (e.location === KeyboardEvent.DOM_KEY_LOCATION_LEFT) {
+      result.push("shift-left");
+    }
+    if (e.location === KeyboardEvent.DOM_KEY_LOCATION_LEFT) {
+      result.push("shift-right");
+    }
+  }
+  if (e.altKey) {
+    result.push("alt");
+    if (e.location === KeyboardEvent.DOM_KEY_LOCATION_LEFT) {
+      result.push("alt-left");
+    }
+    if (e.location === KeyboardEvent.DOM_KEY_LOCATION_LEFT) {
+      result.push("alt-right");
+    }
+  }
+  return result;
+}
+
+export function useGlobalPressedKeySet() {
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      pressedKeySet.add(e.key);
+      const modifiers = getModifierKeyStrings(e);
+      for (const modifier of modifiers) {
+        pressedKeySet.add(modifier);
+      }
+    };
+    const onKeyUp = (e: KeyboardEvent) => {
+      pressedKeySet.delete(e.key);
+      const modifiers = getModifierKeyStrings(e);
+      for (const modifier of modifiers) {
+        pressedKeySet.delete(modifier);
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    window.addEventListener("keyup", onKeyUp);
+    return function () {
+      window.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("keyup", onKeyUp);
+    };
+  }, []);
+  return pressedKeySet;
+}
 
 export function useAppKeyboardEvents(
   engineState: EngineState,
   tiles: Tiles | null
 ) {
   const [selection, setSelection] = useAtom(selectionState);
+  const [mode] = useAtom(modeState);
 
   useEffect(() => {
     const onKeydown = async function (e: KeyboardEvent) {
@@ -20,6 +90,25 @@ export function useAppKeyboardEvents(
         return;
       }
 
+      // running
+      if (mode.state === "running") {
+        // TODO: keyboard global so onFrame one can check for pressed keys
+        // instead of just running funcitons on keyboard events. Two different
+        // apis to handle keyboard interactions. good idea? tbd.
+        for (const eo of engineState.objects) {
+          console.log("key", e.key);
+          eo._proxyForScripting.triggerKeypress({ key: e.key });
+        }
+        e.preventDefault();
+        return;
+      }
+
+      // skip when focusing text fields, etc
+      if (document.activeElement !== document.body) {
+        return;
+      }
+
+      // editing
       switch (e.key) {
         case "Backspace": {
           // console.log("BS", e.repeat);
@@ -85,9 +174,13 @@ export function useAppKeyboardEvents(
       }
     };
 
+    const onKeypress = function (e: KeyboardEvent) {};
+
     window.addEventListener("keydown", onKeydown);
+    window.addEventListener("keypress", onKeypress);
     return () => {
       window.removeEventListener("keydown", onKeydown);
+      window.removeEventListener("keypress", onKeypress);
     };
-  }, [engineState, selection, setSelection, tiles]);
+  }, [engineState, mode, selection, setSelection, tiles]);
 }

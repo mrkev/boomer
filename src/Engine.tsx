@@ -1,4 +1,5 @@
 import { serialize } from "./Document";
+import { degVectorFromAToB, Rect, rectCenter, rectOverlap } from "./Rect";
 
 export class Tiles {
   readonly url: string;
@@ -91,12 +92,30 @@ export abstract class EngineObject {
   width: number = 0;
   height: number = 0;
   abstract paintToContext(ctx: CanvasRenderingContext2D): void;
-  _proxyForScripting = new ProxyForScripting(this);
+
+  getRect(): Rect {
+    return [this.x, this.y, this.width, this.height];
+  }
+
+  // For scripting
+  id: null | string = null;
+  _proxyForScripting = new EOProxyForScripting(this);
   _script: string = "this.onClick(() => { this.x = 0; });";
 
   __getEOSerializableRepresentation(): Record<string, any> {
-    const { x, y, width, height, _script } = this;
-    return { x, y, width, height, _script };
+    const result: Record<string, any> = {};
+    for (const key in this) {
+      console.log("key", key, this[key]);
+      if (
+        typeof this[key] === "string" ||
+        typeof this[key] === "number" ||
+        typeof this[key] === "boolean"
+      )
+        result[key] = this[key];
+    }
+
+    console.log("result", result);
+    return result;
   }
 
   // __getSerialRepresentation() {
@@ -123,15 +142,18 @@ export abstract class EngineObject {
   // }
 }
 
+type ScriptingKeyEvent = { key: string };
+
 /**
  * Proxy scripting so we decide what's scriptable, so the scripting api remains
  * different from the internal api, and so user-generated references
  * (say, event listeners) are separate from internal ones.
  */
-export class ProxyForScripting {
+export class EOProxyForScripting {
   #eo: EngineObject;
   #clickHandlers: Array<() => void> = [];
   #frameHandlers: Array<() => void> = [];
+  #keypressHandlers: Array<(evt: ScriptingKeyEvent) => void> = [];
 
   constructor(eo: EngineObject) {
     this.#eo = eo;
@@ -142,8 +164,11 @@ export class ProxyForScripting {
   }
 
   onFrame(cb: () => void) {
-    console.log("SETTING OF", cb);
     this.#frameHandlers.push(cb);
+  }
+
+  onKeypress(cb: () => void) {
+    this.#keypressHandlers.push(cb);
   }
 
   triggerClick() {
@@ -154,17 +179,95 @@ export class ProxyForScripting {
 
   triggerFrame() {
     for (const handler of this.#frameHandlers) {
-      console.log("running", handler);
       handler.call(this);
+    }
+  }
+
+  triggerKeypress(evt: ScriptingKeyEvent) {
+    for (const handler of this.#keypressHandlers) {
+      handler.call(this, evt);
+    }
+  }
+
+  getRect() {
+    return this.#eo.getRect();
+  }
+
+  isColliding(b: EOProxyForScripting): boolean {
+    const ar = this.getRect();
+    const br = b.getRect();
+    return rectOverlap(ar, br);
+  }
+
+  angleToObject(b: EOProxyForScripting): number {
+    const ar = this.getRect();
+    const br = b.getRect();
+    const ac = rectCenter(ar);
+    const bc = rectCenter(br);
+
+    const [_, angle] = degVectorFromAToB(ac, bc);
+    return angle;
+  }
+  // Instead calculating this from the angles between centers, I want to find the
+  // closest edge, I think, or build the collision direction into the collision
+  // function maybe?
+  cardinalDirectionToObject(b: EOProxyForScripting): "N" | "S" | "E" | "W" {
+    const angle = this.angleToObject(b);
+    switch (true) {
+      case Math.abs(angle) < 45:
+        return "E";
+      case Math.abs(angle) > 135:
+        return "W";
+      case angle < 0:
+        return "N";
+      default:
+        return "S";
     }
   }
 
   get x() {
     return this.#eo.x;
   }
-
   set x(n: number) {
     this.#eo.x = n;
+  }
+
+  get y() {
+    return this.#eo.y;
+  }
+  set y(n: number) {
+    this.#eo.y = n;
+  }
+
+  get width() {
+    return this.#eo.width;
+  }
+  set width(n: number) {
+    this.#eo.width = n;
+  }
+
+  get height() {
+    return this.#eo.height;
+  }
+  set height(n: number) {
+    this.#eo.height = n;
+  }
+
+  get id() {
+    return this.#eo.id;
+  }
+  set id(n: string | null) {
+    this.#eo.id = n;
+  }
+
+  // These will show up in the editor
+  static {
+    const keys: Array<keyof EOProxyForScripting> = ["x", "id", "y"];
+    for (const key of keys) {
+      Object.defineProperty(EOProxyForScripting.prototype, key, {
+        enumerable: true,
+      });
+    }
   }
 }
 
@@ -219,7 +322,11 @@ export class Sprite extends EngineObject {
   }
 
   paintToContext(ctx: CanvasRenderingContext2D) {
-    ctx.drawImage(this.image, this.x, this.y);
+    // pixel-perfect
+    const x = Math.round(this.x);
+    const y = Math.round(this.y);
+    // const { x, y } = this;
+    ctx.drawImage(this.image, x, y);
   }
 
   __getSerialRepresentation() {
@@ -242,6 +349,7 @@ export class Sprite extends EngineObject {
 export class EngineState {
   readonly objects: Set<EngineObject> = new Set();
   private _debug_spriteBoxes = false;
+  _globalScript = "";
 
   addSprite(eo: EngineObject) {
     this.objects.add(eo);

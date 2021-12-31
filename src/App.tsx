@@ -1,5 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
-import Editor, { BeforeMount, OnChange, OnMount } from "@monaco-editor/react";
+import React, { useCallback, useEffect, useState } from "react";
 
 import "./App.css";
 import { Tiles, EngineState, Sprite, EngineObject } from "./Engine";
@@ -9,9 +8,9 @@ import { cursorState, modeState, selectionState } from "./AppState";
 import { useAppMouseCursor } from "./useAppMouseCursor";
 import { mapSet } from "./mapSet";
 import { useAppKeyboardEvents } from "./useAppKeyboardEvents";
-import type { editor } from "monaco-editor";
 import { deserialize, Doc_V1, serializeDoc } from "./Document";
-import { minSpanningRect } from "./Rect";
+import { minSpanningRect, Rect } from "./Rect";
+import { PropsEditor } from "./PropsEditor";
 
 const CANVAS_SIZE: [number, number] = [300, 150];
 
@@ -83,6 +82,10 @@ export default function App() {
 
   const doSave = () => {
     if (!tiles) {
+      return;
+    }
+    if (!confirm("This will override all data. Are you sure")) {
+      console.log("NOT SAVING");
       return;
     }
     const doc = new Doc_V1({ engineState, tiles });
@@ -235,7 +238,7 @@ function TransformBox({
   engineObjects: Array<EngineObject>;
 }) {
   const [cursor, setCursor] = useAtom(cursorState);
-  const eosRects = eos.map((eo) => [eo.x, eo.y, eo.width, eo.height] as const);
+  const eosRects = eos.map((eo) => [eo.x, eo.y, eo.width, eo.height] as Rect);
   const minRect = minSpanningRect(eosRects);
 
   if (minRect === null) {
@@ -300,58 +303,5 @@ function TransformBox({
         return <div key={pos} style={style}></div>;
       })}
     </div>
-  );
-}
-
-function PropsEditor({ engineObject: eo }: { engineObject: EngineObject }) {
-  return (
-    <div style={{ display: "flex", flexDirection: "row" }}>
-      <CodeEditor engineObject={eo} />
-      <pre>
-        {eo.constructor.name}{" "}
-        {JSON.stringify(
-          eo,
-          (key, value) => {
-            if (key[0] === "_") {
-              return undefined;
-            } else {
-              return value;
-            }
-          },
-          2
-        )}
-      </pre>
-    </div>
-  );
-}
-
-function CodeEditor({ engineObject: eo }: { engineObject: EngineObject }) {
-  const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
-  const handleEditorWillMount: BeforeMount = function (monaco) {
-    monaco.languages.typescript.javascriptDefaults.addExtraLib(`
-    declare const frame: {width: number, height: number};
-    `);
-  };
-
-  const handleEditorDidMount: OnMount = function (editor) {
-    // here is the editor instance
-    // you can store it in `useRef` for further usage
-    editorRef.current = editor;
-  };
-
-  const handleEditorChange: OnChange = (value) => {
-    eo._script = value || "";
-  };
-
-  return (
-    <Editor
-      width={700}
-      height="90vh"
-      defaultLanguage="javascript"
-      defaultValue={eo._script}
-      beforeMount={handleEditorWillMount}
-      onMount={handleEditorDidMount}
-      onChange={handleEditorChange}
-    />
   );
 }

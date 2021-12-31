@@ -1,5 +1,18 @@
 import React, { useCallback, useEffect, useRef } from "react";
-import { EngineState, Sprite, ProxyForScripting, EngineObject } from "./Engine";
+import {
+  EngineState,
+  Sprite,
+  EOProxyForScripting,
+  EngineObject,
+} from "./Engine";
+import {
+  degVectorFromAToB,
+  radVectorFromAToB,
+  rectCenter,
+  rectOverlap,
+  rectSubset,
+} from "./Rect";
+import { useGlobalPressedKeySet } from "./useAppKeyboardEvents";
 
 /** Pixel-perfect and scaled coordinates of mouse/pointer events */
 function getEventCanvasCoordinates(
@@ -46,6 +59,80 @@ export type EngineMouseEvent = {
   nativeEvent: MouseEvent;
 };
 
+function initializeRun(
+  engineState: EngineState,
+  canvas: HTMLCanvasElement,
+  pressedKeySet: Set<string>
+) {
+  const frame = {
+    width: canvas.width,
+    height: canvas.height,
+  };
+
+  const objects = {
+    find(id: string): null | EOProxyForScripting {
+      // TODO: editor-side check for non-duplicate ids
+      for (const obj of engineState.objects.values()) {
+        if (obj.id === id) {
+          return obj._proxyForScripting;
+        }
+      }
+      return null;
+    },
+
+    // todo: split up to "isColliding" and "directionToObject"
+    // todo: add this.isColliding(b) to ProxyForScripting
+    areColliding(a: EOProxyForScripting, b: EOProxyForScripting): boolean {
+      const ar = a.getRect();
+      const br = b.getRect();
+      return rectOverlap(ar, br);
+    },
+
+    // returns the angle at which two elements are colliding
+    // or null if they're not
+    findCollisionAngle(
+      a: EOProxyForScripting,
+      b: EOProxyForScripting
+    ): number | null {
+      const ar = a.getRect();
+      const br = b.getRect();
+      if (!rectOverlap(ar, br)) {
+        return null;
+      }
+
+      const ac = rectCenter(ar);
+      const bc = rectCenter(br);
+
+      const [_, angle] = degVectorFromAToB(ac, bc);
+      return angle;
+    },
+  };
+
+  const keyboard = {
+    isPressed(...keys: string[]): boolean {
+      for (const key of keys) {
+        if (!pressedKeySet.has(key)) {
+          return false;
+        }
+      }
+      return true;
+    },
+  };
+
+  for (const eo of engineState.objects) {
+    eo._proxyForScripting = new EOProxyForScripting(eo);
+    const script = new Function(
+      "console",
+      "frame",
+      "objects",
+      "keyboard",
+      eo._script
+    );
+    script.call(eo._proxyForScripting, console, frame, objects, keyboard);
+    console.log("initialized", eo);
+  }
+}
+
 export function EngineComponent({
   state: engineState,
   onClick,
@@ -64,6 +151,7 @@ export function EngineComponent({
   size: [number, number];
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const pressedKeySet = useGlobalPressedKeySet();
 
   useEffect(() => {
     if (mode === "editing" || canvasRef.current == null) {
@@ -71,16 +159,7 @@ export function EngineComponent({
     }
     // On RUN
     else {
-      console.log("todo: intialize objects");
-      for (const eo of engineState.objects) {
-        eo._proxyForScripting = new ProxyForScripting(eo);
-        const script = new Function("console", "frame", eo._script);
-        script.call(eo._proxyForScripting, console, {
-          width: canvasRef.current.width,
-          height: canvasRef.current.height,
-        });
-        console.log("initialized", eo);
-      }
+      initializeRun(engineState, canvasRef.current, pressedKeySet);
     }
   }, [engineState, mode]);
 
@@ -207,7 +286,6 @@ export function EngineComponent({
       onClick={onEngineClick}
       onMouseDown={onEngineMouseDown}
       onMouseUp={onEngineMouseUp}
-      onContextMenu={function () {}}
     ></canvas>
   );
 }
