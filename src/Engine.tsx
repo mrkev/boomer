@@ -1,4 +1,5 @@
 import { serialize } from "./Document";
+import OrderedSet from "./OrderedSet";
 import { degVectorFromAToB, Rect, rectCenter, rectOverlap } from "./Rect";
 
 export class Tiles {
@@ -87,6 +88,8 @@ export class Tiles {
 // TODO: rename __getSerialRepresentation() to __getSerializableRepresentation
 
 export abstract class EngineObject {
+  id: null | string = null;
+
   x: number = 0;
   y: number = 0;
   width: number = 0;
@@ -98,7 +101,6 @@ export abstract class EngineObject {
   }
 
   // For scripting
-  id: null | string = null;
   _proxyForScripting = new EOProxyForScripting(this);
   _script: string = "this.onClick(() => { this.x = 0; });";
 
@@ -347,7 +349,7 @@ export class Sprite extends EngineObject {
 }
 
 export class EngineState {
-  readonly objects: Set<EngineObject> = new Set();
+  readonly objects: OrderedSet<EngineObject> = new OrderedSet<EngineObject>();
   private _debug_spriteBoxes = false;
   _globalScript = "";
 

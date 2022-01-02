@@ -25,7 +25,7 @@ export const cursorState = atom<CursorState>({
   state: "idle",
 });
 
-type SelectionState =
+export type SelectionState =
   | { state: "idle" }
   | { state: "engine-object"; eos: Array<EngineObject> };
 

@@ -4,13 +4,27 @@ import "./App.css";
 import { Tiles, EngineState, Sprite, EngineObject } from "./Engine";
 import { EngineComponent, EngineMouseEvent } from "./EngineComponent";
 import { useAtom } from "jotai";
-import { cursorState, modeState, selectionState } from "./AppState";
+import {
+  cursorState,
+  modeState,
+  SelectionState,
+  selectionState,
+} from "./AppState";
 import { useAppMouseCursor } from "./useAppMouseCursor";
 import { mapSet } from "./mapSet";
 import { useAppKeyboardEvents } from "./useAppKeyboardEvents";
-import { deserialize, Doc_V1, serializeDoc } from "./Document";
+import { deserialize, doSave } from "./Document";
 import { minSpanningRect, Rect } from "./Rect";
 import { PropsEditor } from "./PropsEditor";
+import {
+  Button,
+  ButtonGroup,
+  Divider,
+  Tab,
+  Tabs,
+  TabId,
+} from "@blueprintjs/core";
+import SplitPane from "react-split-pane";
 
 const CANVAS_SIZE: [number, number] = [300, 150];
 
@@ -23,17 +37,6 @@ export default function App() {
 
   useAppMouseCursor(engineState, CANVAS_SIZE);
   useAppKeyboardEvents(engineState, tiles);
-
-  const addRandomTile = useCallback(async () => {
-    if (!tiles) {
-      return;
-    }
-    const sprite = await tiles.genSprite((Math.random() * 100) >> 0);
-    sprite.x = (Math.random() * 100) >> 0;
-    sprite.y = (Math.random() * 100) >> 0;
-    engineState.addSprite(sprite);
-    (window as any).es = engineState;
-  }, [engineState, tiles]);
 
   useEffect(() => {
     async function loadTiles() {
@@ -80,20 +83,6 @@ export default function App() {
     }
   };
 
-  const doSave = () => {
-    if (!tiles) {
-      return;
-    }
-    if (!confirm("This will override all data. Are you sure")) {
-      console.log("NOT SAVING");
-      return;
-    }
-    const doc = new Doc_V1({ engineState, tiles });
-    const serialized = serializeDoc(doc);
-    localStorage.setItem("boomer-doc", serialized);
-    localStorage.setItem("boomer-doc-exists", "1");
-  };
-
   const doLoad = () => {
     (async function run() {
       const str = localStorage.getItem("boomer-doc");
@@ -112,37 +101,67 @@ export default function App() {
   };
 
   return (
-    <div className="App">
+    <>
       <div style={{ display: "flex", flexDirection: "row" }}>
-        <button onClick={doSave}>Save</button>
-        <button
-          onClick={doLoad}
-          disabled={localStorage.getItem("boomer-doc-exists") == null}
-        >
-          Load
-        </button>
-        <button
-          onClick={() => {
-            if (mode.state === "editing") {
-              setMode({ state: "running" });
-            } else {
-              setMode({ state: "editing" });
-            }
-          }}
-        >
-          {mode.state === "running" ? "Running" : "Editing"}
-        </button>
-        <button onClick={() => addRandomTile()}>Add random tile</button>
+        <ButtonGroup minimal>
+          <Button small text="Boomer 0.0.1" disabled />
+          <Button
+            small
+            icon="floppy-disk"
+            text="Save"
+            onClick={() => tiles && doSave(engineState, tiles)}
+          />
+          <Button
+            small
+            icon="document-open"
+            text="Load"
+            disabled={localStorage.getItem("boomer-doc-exists") == null}
+            onClick={doLoad}
+          />
+          <Divider />
+          <Button
+            small
+            intent={mode.state === "editing" ? "primary" : "danger"}
+            icon={mode.state === "editing" ? "play" : "stop"}
+            // text={mode.state === "running" ? "Running" : "Editing"}
+            onClick={() => {
+              if (mode.state === "editing") {
+                setMode({ state: "running" });
+              } else {
+                setMode({ state: "editing" });
+              }
+            }}
+          />
+        </ButtonGroup>
       </div>
       <pre>{JSON.stringify(cursor)}</pre>
 
-      <div style={{ display: "flex", flexDirection: "row" }}>
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "row",
+          flexGrow: 1,
+          alignItems: "flex-start",
+        }}
+      >
+        {/* <SplitPane
+          resizerStyle={{
+            minWidth: 3,
+            background: "red",
+            cursor: "ew-resize",
+          }}
+          split="vertical"
+          step={50}
+          minSize={200}
+          maxSize={1000}
+        > */}
         <div
           style={{
             position: "relative",
             border:
               mode.state === "running" ? "3px red solid" : "1px solid grey",
             marginLeft: 10,
+            overflow: "hidden",
           }}
         >
           <EngineComponent
@@ -157,44 +176,18 @@ export default function App() {
           )}
           {cursor.state === "selecting" && <SelectionBox />}
         </div>
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            flexGrow: 1,
-          }}
-        >
-          LAYERS
-          <hr style={{ width: "100%" }}></hr>
-          {mapSet(engineState.objects, (eo, i) => {
-            if (!(eo instanceof Sprite)) {
-              return;
-            }
 
-            const isSelected =
-              selection.state === "engine-object" && selection.eos.includes(eo);
+        <LayersAndTiles
+          engineState={engineState}
+          selectSingleSprite={selectSingleSprite}
+          tiles={tiles}
+          selection={selection}
+        />
 
-            return (
-              <div
-                key={i}
-                style={{
-                  background: isSelected ? "red" : undefined,
-                  cursor: "pointer",
-                }}
-                onClick={() => {
-                  selectSingleSprite(isSelected ? null : eo);
-                }}
-              >
-                Sprite {i}
-              </div>
-            );
-          })}
-        </div>
+        {/* </SplitPane> */}
       </div>
-      {selection.state === "engine-object" && selection.eos.length === 1 && (
-        <PropsEditor engineObject={selection.eos[0]} />
-      )}
-    </div>
+      <PropsEditor />
+    </>
   );
 }
 
@@ -302,6 +295,82 @@ function TransformBox({
         }
         return <div key={pos} style={style}></div>;
       })}
+    </div>
+  );
+}
+
+function LayersAndTiles({
+  engineState,
+  selection,
+  tiles,
+  selectSingleSprite,
+}: {
+  engineState: EngineState;
+  selection: SelectionState;
+  tiles: Tiles | null;
+  selectSingleSprite: (sprite: Sprite | null) => void;
+}) {
+  const [selectedTab, setSelectedTab] = useState<TabId>("layers");
+
+  const addRandomTile = useCallback(async () => {
+    if (!tiles) {
+      return;
+    }
+    const sprite = await tiles.genSprite((Math.random() * 100) >> 0);
+    sprite.x = (Math.random() * 100) >> 0;
+    sprite.y = (Math.random() * 100) >> 0;
+    engineState.addSprite(sprite);
+    (window as any).es = engineState;
+  }, [engineState, tiles]);
+
+  return (
+    <div style={{ flexGrow: 1, padding: "0px 8px" }}>
+      <Tabs
+        id="LayersAndTiles"
+        selectedTabId={selectedTab}
+        onChange={(id) => setSelectedTab(id)}
+      >
+        <Tab
+          id="layers"
+          title="Layers"
+          panel={
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                flexGrow: 1,
+              }}
+            >
+              {mapSet(engineState.objects, (eo, i) => {
+                if (!(eo instanceof Sprite)) {
+                  return;
+                }
+
+                const isSelected =
+                  selection.state === "engine-object" &&
+                  selection.eos.includes(eo);
+
+                return (
+                  <div
+                    key={i}
+                    style={{
+                      background: isSelected ? "red" : undefined,
+                      cursor: "pointer",
+                    }}
+                    onClick={() => {
+                      selectSingleSprite(isSelected ? null : eo);
+                    }}
+                  >
+                    Sprite {i}
+                  </div>
+                );
+              })}
+              <button onClick={() => addRandomTile()}>Add random tile</button>
+            </div>
+          }
+        />
+        <Tab id="tiles" title="Tiles" panel={<div />} />
+      </Tabs>
     </div>
   );
 }

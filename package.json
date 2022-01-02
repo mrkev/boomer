@@ -9,12 +9,20 @@
   "dependencies": {
     "@blueprintjs/core": "^3.52.0",
     "@monaco-editor/react": "^4.3.1",
+    "@react95/core": "^5.7.2",
+    "@types/styled-components": "^5.1.19",
+    "@types/xstyled__styled-components": "^1.19.2",
     "jotai": "^1.4.9",
     "monaco-editor": "^0.31.1",
+    "packard-belle": "^0.3.4",
     "react": "^17.0.2",
-    "react-dom": "^17.0.2"
+    "react-dom": "^17.0.2",
+    "react-split-pane": "^0.1.92",
+    "styled-components": "^5.3.3"
   },
   "devDependencies": {
+    "@testing-library/react": "^12.1.2",
+    "@types/jest": "^27.4.0",
     "@types/react": "^17.0.33",
     "@types/react-dom": "^17.0.10",
     "@typescript-eslint/eslint-plugin": "^5.8.0",
@@ -22,7 +30,10 @@
     "@vitejs/plugin-react": "^1.0.7",
     "eslint": "^8.5.0",
     "eslint-plugin-react-hooks": "^4.3.0",
+    "jest": "^27.4.5",
+    "jest-environment-jsdom": "^27.4.4",
     "typescript": "^4.5.4",
-    "vite": "^2.7.2"
+    "vite": "^2.7.2",
+    "vite-jest": "^0.1.4"
   }
 }

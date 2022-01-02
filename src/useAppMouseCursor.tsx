@@ -111,7 +111,12 @@ export function useAppMouseCursor(
             }
           }
 
-          setSelection({ state: "engine-object", eos: selectedObjects });
+          if (selectedObjects.length > 0) {
+            setSelection({ state: "engine-object", eos: selectedObjects });
+          } else {
+            setSelection({ state: "idle" });
+          }
+
           console.log("SET IDLE");
           setCursor({ state: "idle" });
           break;

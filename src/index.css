@@ -5,7 +5,7 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background-color: black;
+  background-color: #22272e;
   color: white;
 }
 
@@ -19,4 +19,10 @@ body,
 #root {
   width: 100%;
   height: 100%;
+}
+
+#root {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }

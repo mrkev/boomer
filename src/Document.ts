@@ -1,4 +1,16 @@
+import { assert } from "./assert";
 import { EngineObject, EngineState, Sprite, Tiles } from "./Engine";
+
+export const doSave = (engineState: EngineState, tiles: Tiles) => {
+  if (!confirm("This will override all data. Are you sure")) {
+    console.log("NOT SAVING");
+    return;
+  }
+  const doc = new Doc_V1({ engineState, tiles });
+  const serialized = serializeDoc(doc);
+  localStorage.setItem("boomer-doc", serialized);
+  localStorage.setItem("boomer-doc-exists", "1");
+};
 
 export class Doc_V1 {
   engineState: EngineState;
@@ -140,9 +152,3 @@ export const hydrateFor = {
     return sprite;
   },
 } as const;
-
-function assert(val: boolean, msg?: string) {
-  if (!val) {
-    throw new Error(msg || "Failed assertion");
-  }
-}

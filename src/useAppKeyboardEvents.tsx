@@ -2,7 +2,7 @@ import { Key, useEffect } from "react";
 import { EngineState, Sprite, Tiles } from "./Engine";
 import { useAtom } from "jotai";
 import { modeState, selectionState } from "./AppState";
-import { hydrateFor } from "./Document";
+import { doSave, hydrateFor } from "./Document";
 
 export const pressedKeySet: Set<string> = new Set();
 
@@ -86,9 +86,6 @@ export function useAppKeyboardEvents(
         (navigator as any).userAgentData.platform === "macOS"
           ? e.metaKey
           : e.ctrlKey;
-      if (e.repeat) {
-        return;
-      }
 
       // running
       if (mode.state === "running") {
@@ -113,11 +110,68 @@ export function useAppKeyboardEvents(
         case "Backspace": {
           // console.log("BS", e.repeat);
           if (selection.state !== "engine-object") {
-            return;
+            break;
           }
           for (const eo of selection.eos) {
             engineState.removeSprite(eo);
             setSelection({ state: "idle" });
+          }
+          break;
+        }
+
+        case "ArrowDown": {
+          if (selection.state !== "engine-object") {
+            break;
+          }
+
+          for (const eo of selection.eos) {
+            eo.y += 1;
+          }
+
+          break;
+        }
+
+        case "ArrowUp": {
+          if (selection.state !== "engine-object") {
+            break;
+          }
+          for (const eo of selection.eos) {
+            eo.y -= 1;
+          }
+          break;
+        }
+
+        case "ArrowLeft": {
+          if (selection.state !== "engine-object") {
+            break;
+          }
+
+          for (const eo of selection.eos) {
+            eo.x -= 1;
+          }
+
+          break;
+        }
+
+        case "s": {
+          if (!cmd) {
+            break;
+          }
+
+          if (!tiles) {
+            break;
+          }
+
+          doSave(engineState, tiles);
+          e.preventDefault();
+        }
+
+        case "ArrowRight": {
+          if (selection.state !== "engine-object") {
+            break;
+          }
+          for (const eo of selection.eos) {
+            eo.x += 1;
           }
           break;
         }

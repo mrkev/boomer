@@ -17,5 +17,5 @@
     "jsx": "react-jsx",
     "noImplicitOverride": true
   },
-  "include": ["./src"]
+  "include": ["./src", "jest.config.js"]
 }

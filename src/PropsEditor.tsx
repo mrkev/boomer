@@ -1,21 +1,16 @@
-import React, {
-  createRef,
-  RefObject,
-  useEffect,
-  useRef,
-  useState,
-} from "react";
+import React, { RefObject, useEffect, useRef, useState } from "react";
 import Editor, { BeforeMount, OnChange, OnMount } from "@monaco-editor/react";
-import { EngineObject, EOProxyForScripting } from "./Engine";
+import { EngineObject } from "./Engine";
 import { editor } from "monaco-editor";
+import SplitPane from "react-split-pane";
+import { useAtom } from "jotai";
+import { selectionState } from "./AppState";
+import { NonIdealState } from "@blueprintjs/core";
 
-export function PropsEditor({
-  engineObject: eo,
-}: {
-  engineObject: EngineObject;
-}) {
+export function PropsEditor() {
+  const [selection] = useAtom(selectionState);
   const elRefs = useRef<Record<string, RefObject<HTMLInputElement>>>({});
-  const t2Ref = useRef<HTMLTableSectionElement | null>(null);
+  // const t2Ref = useRef<HTMLTableSectionElement | null>(null);
   const [_, update] = useState({});
 
   // const arrLength = Object.keys(eo).length;
@@ -29,6 +24,25 @@ export function PropsEditor({
   //     elRefs.current[key] = createRef();
   //   }
   // }
+
+  console.log("RETURNING HERe", selection);
+  if (selection.state !== "engine-object") {
+    return (
+      <NonIdealState
+        icon="select"
+        title="Nothing selected"
+        description="Select something to inspect"
+      />
+    );
+  }
+
+  if (selection.eos.length !== 1) {
+    return (
+      <NonIdealState icon="multi-select" title="Multiple objects selected" />
+    );
+  }
+
+  const eo = selection.eos[0];
 
   const fields = [];
   // Using the proxy establishes that if it's editable it's scriptable,
@@ -109,12 +123,45 @@ export function PropsEditor({
   // );
 
   return (
-    <div style={{ display: "flex", flexDirection: "row" }}>
-      <CodeEditor engineObject={eo} />
+    // <SplitPane
+    //   split="vertical"
+    //   defaultSize="50%"
+    //   resizerStyle={{
+    //     background: "green",
+    //     minWidth: "10px",
+    //   }}
+    // >
+    <div
+      style={{
+        background: "red",
+        display: "flex",
+        flexDirection: "row",
+        width: "100%",
+        height: "40vh",
+      }}
+    >
+      <div style={{ flexGrow: 1 }}>
+        <CodeEditor engineObject={eo} />
+      </div>
 
-      <table>
+      <table style={{ width: 200, alignSelf: "flex-start" }}>
         <tbody>{fields}</tbody>
       </table>
+    </div>
+    // </SplitPane>
+  );
+
+  return (
+    <div style={{ display: "flex", flexDirection: "row" }}>
+      <SplitPane split="vertical" defaultSize="50%">
+        {/* <div>default percentage: 50%</div> */}
+        <CodeEditor engineObject={eo} />
+
+        <table>
+          <tbody>{fields}</tbody>
+        </table>
+        {/* <div /> */}
+      </SplitPane>
 
       {/* <table>
         <tbody ref={t2Ref}></tbody>
@@ -171,8 +218,8 @@ function CodeEditor({ engineObject: eo }: { engineObject: EngineObject }) {
   return (
     <Editor
       options={{ minimap: { enabled: false }, tabSize: 2, insertSpaces: true }}
-      width={700}
-      height="40vh"
+      width="100%"
+      height="100%"
       defaultLanguage="javascript"
       defaultValue={eo._script}
       beforeMount={handleEditorWillMount}
