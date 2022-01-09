@@ -81,7 +81,7 @@ export class Tiles {
 
     const url = this.url + "@" + num;
 
-    return new Sprite(image, url);
+    return new Sprite(image, url, 0, 0);
   }
 }
 
@@ -90,10 +90,17 @@ export class Tiles {
 export abstract class EngineObject {
   id: null | string = null;
 
-  x: number = 0;
-  y: number = 0;
-  width: number = 0;
-  height: number = 0;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  constructor(x: number, y: number, width: number, height: number) {
+    this.x = x;
+    this.y = y;
+    this.width = width;
+    this.height = height;
+  }
+
   abstract paintToContext(ctx: CanvasRenderingContext2D): void;
 
   getRect(): Rect {
@@ -119,29 +126,6 @@ export abstract class EngineObject {
     console.log("result", result);
     return result;
   }
-
-  // __getSerialRepresentation() {
-  //   const result: Record<string, unknown> = {};
-  //   for (const key in this) {
-  //     // by default don't serialize properties that start with "_"
-  //     if (key[0] === "_") {
-  //       continue;
-  //     }
-
-  //     const val: any = this[key];
-
-  //     if (
-  //       typeof val === "object" &&
-  //       typeof val.__getSerialRepresentation === "function"
-  //     ) {
-  //       result[key] = val.__getSerialRepresentation();
-  //     } else {
-  //       result[key] = val;
-  //     }
-  //   }
-
-  //   return result;
-  // }
 }
 
 type ScriptingKeyEvent = { key: string };
@@ -274,10 +258,6 @@ export class EOProxyForScripting {
 }
 
 export class Box extends EngineObject {
-  override x: number = 0;
-  override y: number = 0;
-  override width: number;
-  override height: number;
   color: string;
 
   constructor({
@@ -293,11 +273,7 @@ export class Box extends EngineObject {
     height: number;
     color?: string;
   }) {
-    super();
-    this.x = x;
-    this.y = y;
-    this.width = width;
-    this.height = height;
+    super(x, y, width, height);
     this.color = color;
   }
 
@@ -307,19 +283,41 @@ export class Box extends EngineObject {
   }
 }
 
+interface Serializable {
+  __getSerialRepresentation(): Record<string, any>;
+}
+
+export class Text extends EngineObject implements Serializable {
+  text: string = "";
+  color: string = "";
+
+  constructor(x: number, y: number, text: string) {
+    super(x, y, 0, 0);
+    this.text = text;
+  }
+
+  paintToContext(ctx: CanvasRenderingContext2D): void {
+    const dims = ctx.measureText(this.text);
+    this.width = dims.width;
+    this.height = dims.fontBoundingBoxAscent + dims.fontBoundingBoxDescent;
+    ctx.fillText(this.text, this.x, this.y + this.height);
+  }
+
+  __getSerialRepresentation() {
+    const result = this.__getEOSerializableRepresentation();
+    const { text } = this;
+
+    return Object.assign(result, { text });
+  }
+}
+
 export class Sprite extends EngineObject {
-  override x: number = 0;
-  override y: number = 0;
-  override width: number;
-  override height: number;
   private image: ImageBitmap;
   private imageUrl: string;
 
-  constructor(image: ImageBitmap, imageUrl: string) {
-    super();
+  constructor(image: ImageBitmap, imageUrl: string, x: number, y: number) {
+    super(x, y, image.width, image.height);
     this.image = image;
-    this.width = image.width;
-    this.height = image.height;
     this.imageUrl = imageUrl;
   }
 
@@ -327,7 +325,7 @@ export class Sprite extends EngineObject {
     // pixel-perfect
     const x = Math.round(this.x);
     const y = Math.round(this.y);
-    // const { x, y } = this;
+    // const { x, y } = this;0
     ctx.drawImage(this.image, x, y);
   }
 
@@ -353,11 +351,11 @@ export class EngineState {
   private _debug_spriteBoxes = false;
   _globalScript = "";
 
-  addSprite(eo: EngineObject) {
+  addEngineObject(eo: EngineObject) {
     this.objects.add(eo);
   }
 
-  removeSprite(eo: EngineObject) {
+  removeEngineObject(eo: EngineObject) {
     this.objects.delete(eo);
   }
 

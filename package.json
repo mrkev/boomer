@@ -9,16 +9,13 @@
   "dependencies": {
     "@blueprintjs/core": "^3.52.0",
     "@monaco-editor/react": "^4.3.1",
-    "@react95/core": "^5.7.2",
     "@types/styled-components": "^5.1.19",
     "@types/xstyled__styled-components": "^1.19.2",
     "jotai": "^1.4.9",
     "monaco-editor": "^0.31.1",
-    "packard-belle": "^0.3.4",
     "react": "^17.0.2",
     "react-dom": "^17.0.2",
-    "react-split-pane": "^0.1.92",
-    "styled-components": "^5.3.3"
+    "react-split-pane": "^0.1.92"
   },
   "devDependencies": {
     "@testing-library/react": "^12.1.2",

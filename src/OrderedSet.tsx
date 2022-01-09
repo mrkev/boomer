@@ -94,6 +94,7 @@ export class OrderedSet<T> extends Set<T> {
   }
 
   // OrderedSet methods
+
   moveToIndex(pos: number, value: T): boolean {
     const has = this.has(value);
     if (has) {
@@ -106,6 +107,19 @@ export class OrderedSet<T> extends Set<T> {
       this.#order.splice(pos, 0, value);
     }
     return has;
+  }
+
+  indexOf(value: T): number {
+    return this.#order.indexOf(value);
+  }
+
+  /**
+   *
+   * @param index index of the value in the order
+   * @returns the i'th index in the ordered set
+   */
+  get(index: number): T {
+    return this.#order[index];
   }
 }
 

@@ -112,7 +112,7 @@ export const hydrateFor = {
         eo instanceof EngineObject,
         "Hydrated non-EngineObject as EngineObject"
       );
-      engineState.addSprite(eo);
+      engineState.addEngineObject(eo);
     }
     return engineState;
   },

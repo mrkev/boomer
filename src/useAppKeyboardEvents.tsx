@@ -113,7 +113,7 @@ export function useAppKeyboardEvents(
             break;
           }
           for (const eo of selection.eos) {
-            engineState.removeSprite(eo);
+            engineState.removeEngineObject(eo);
             setSelection({ state: "idle" });
           }
           break;
@@ -153,6 +153,23 @@ export function useAppKeyboardEvents(
           break;
         }
 
+        case "ArrowRight": {
+          if (selection.state !== "engine-object") {
+            break;
+          }
+          for (const eo of selection.eos) {
+            eo.x += 1;
+          }
+          break;
+        }
+
+        case "Escape": {
+          if (selection.state !== "idle") {
+            setSelection({ state: "idle" });
+          }
+          break;
+        }
+
         case "s": {
           if (!cmd) {
             break;
@@ -164,16 +181,6 @@ export function useAppKeyboardEvents(
 
           doSave(engineState, tiles);
           e.preventDefault();
-        }
-
-        case "ArrowRight": {
-          if (selection.state !== "engine-object") {
-            break;
-          }
-          for (const eo of selection.eos) {
-            eo.x += 1;
-          }
-          break;
         }
 
         case "c": {
@@ -211,7 +218,7 @@ export function useAppKeyboardEvents(
                   break;
                 }
                 const sprite = await hydrateFor.Sprite(json, tiles);
-                engineState.addSprite(sprite);
+                engineState.addEngineObject(sprite);
                 setSelection({ state: "engine-object", eos: [sprite] });
                 // TODO: Select this sprite
               } catch (e) {

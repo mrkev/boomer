@@ -25,27 +25,24 @@ function getEventCanvasCoordinates(
   return [x, y];
 }
 
-function getSpriteAtCoords(
+function getObjectAtCoords(
   engineState: EngineState,
   [x, y]: [number, number]
-): Sprite | null {
+): EngineObject | null {
   let clickedSprite = null;
   // set order is insertion order, but we want to find the top-most sprite
   // at a coordinate, not the bottom-most
-  for (const art of Array.from(engineState.objects).reverse()) {
-    if (!(art instanceof Sprite)) {
-      continue;
-    }
-    const sprite = art;
+  for (let i = engineState.objects.size - 1; i > 0; i--) {
+    const obj = engineState.objects.get(i);
 
     if (
-      sprite.x <= x &&
-      x <= sprite.x + sprite.width &&
-      sprite.y <= y &&
-      y <= sprite.y + sprite.height
+      obj.x <= x &&
+      x <= obj.x + obj.width &&
+      obj.y <= y &&
+      y <= obj.y + obj.height
     ) {
-      console.log("clicked", sprite);
-      clickedSprite = sprite;
+      console.log("clicked", obj);
+      clickedSprite = obj;
       break;
     }
   }
@@ -55,7 +52,7 @@ function getSpriteAtCoords(
 export type EngineMouseEvent = {
   x: number;
   y: number;
-  sprite: Sprite | null;
+  sprite: EngineObject | null;
   nativeEvent: MouseEvent;
 };
 
@@ -196,7 +193,7 @@ export function EngineComponent({
 
       if (mode === "running") {
         const [x, y] = getEventCanvasCoordinates(canvas, e);
-        const clickedSprite = getSpriteAtCoords(engineState, [x, y]);
+        const clickedSprite = getObjectAtCoords(engineState, [x, y]);
         clickedSprite && dispatchClickEvent(engineState, clickedSprite);
         return;
       }
@@ -206,7 +203,7 @@ export function EngineComponent({
       }
 
       const [x, y] = getEventCanvasCoordinates(canvas, e);
-      const clickedSprite = getSpriteAtCoords(engineState, [x, y]);
+      const clickedSprite = getObjectAtCoords(engineState, [x, y]);
       onClick({ x, y, sprite: clickedSprite, nativeEvent: e.nativeEvent });
     },
     [engineState, mode, onClick]
@@ -228,7 +225,7 @@ export function EngineComponent({
       }
 
       const [x, y] = getEventCanvasCoordinates(canvas, e);
-      const clickedSprite = getSpriteAtCoords(engineState, [x, y]);
+      const clickedSprite = getObjectAtCoords(engineState, [x, y]);
       onMouseDown({ x, y, sprite: clickedSprite, nativeEvent: e.nativeEvent });
     },
     [engineState, onMouseDown]
@@ -250,7 +247,7 @@ export function EngineComponent({
       }
 
       const [x, y] = getEventCanvasCoordinates(canvas, e);
-      const clickedSprite = getSpriteAtCoords(engineState, [x, y]);
+      const clickedSprite = getObjectAtCoords(engineState, [x, y]);
       onMouseUp({ x, y, sprite: clickedSprite, nativeEvent: e.nativeEvent });
     },
     [engineState, onMouseUp]

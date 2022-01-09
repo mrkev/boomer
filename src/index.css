@@ -26,3 +26,9 @@ body,
   flex-direction: column;
   overflow: hidden;
 }
+
+canvas {
+  font-smooth: never;
+  text-rendering: geometricPrecision;
+  -webkit-font-smoothing: none;
+}

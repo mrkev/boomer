@@ -24,9 +24,11 @@ export function useAppMouseCursor(
       case "transforming":
       case "selecting":
         break;
+      case "placing-text":
+        window.document.body.style.cursor = "text";
+        break;
       case "moving":
         window.document.body.style.cursor = "grabbing";
-
         break;
       default:
         exhaustiveSwitch(cursor);
@@ -78,11 +80,14 @@ export function useAppMouseCursor(
 
           break;
         }
+        case "placing-text":
+          break;
         default:
           exhaustiveSwitch(cursor);
       }
     };
-    const mouseUpHandler = function () {
+
+    const mouseUpHandler = function (e: MouseEvent) {
       console.log("mouseUpHandler", cursor.state);
       // console.log("mouse up");
       switch (cursor.state) {
@@ -117,8 +122,11 @@ export function useAppMouseCursor(
             setSelection({ state: "idle" });
           }
 
-          console.log("SET IDLE");
           setCursor({ state: "idle" });
+          break;
+
+        case "placing-text":
+          // handled on canvas mouseUp listener
           break;
         default:
           exhaustiveSwitch(cursor);
@@ -132,6 +140,7 @@ export function useAppMouseCursor(
         case "transforming":
         case "moving":
         case "selecting":
+        case "placing-text":
           setCursor({ state: "idle" });
           break;
         default:

@@ -1,11 +1,18 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, {
+  createRef,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 
 import "./App.css";
-import { Tiles, EngineState, Sprite, EngineObject } from "./Engine";
+import { Tiles, EngineState, Sprite, EngineObject, Text } from "./Engine";
 import { EngineComponent, EngineMouseEvent } from "./EngineComponent";
 import { useAtom } from "jotai";
 import {
   cursorState,
+  exhaustiveSwitch,
   modeState,
   SelectionState,
   selectionState,
@@ -23,8 +30,9 @@ import {
   Tab,
   Tabs,
   TabId,
+  useHotkeys,
 } from "@blueprintjs/core";
-import SplitPane from "react-split-pane";
+import { useRef } from "react";
 
 const CANVAS_SIZE: [number, number] = [300, 150];
 
@@ -42,16 +50,11 @@ export default function App() {
     async function loadTiles() {
       const tiles = await Tiles.from({ url: "/sprites.png", spriteSize: 32 });
       setTiles(tiles);
-      // const sprite = await tiles.genSprite((Math.random() * 100) >> 0);
-      // sprite.x = (Math.random() * 100) >> 0;
-      // sprite.y = (Math.random() * 100) >> 0;
-      // engineState.addSprite(sprite);
-      // console.log("HEREEE");
     }
     loadTiles();
   }, [engineState]);
 
-  const selectSingleSprite = function (sprite: Sprite | null) {
+  const selectSingleSprite = function (sprite: EngineObject | null) {
     if (sprite) {
       setSelection({ state: "engine-object", eos: [sprite] });
     } else {
@@ -66,6 +69,25 @@ export default function App() {
     y,
   }: EngineMouseEvent) {
     selectSingleSprite(sprite);
+    const cursorState = cursor.state;
+
+    switch (cursorState) {
+      case "idle":
+      case "moving":
+      case "selecting":
+      case "transforming":
+        break;
+
+      case "placing-text":
+        // TODO: place text
+        const text = new Text(x, y, "hello world");
+        engineState.addEngineObject(text);
+        setCursor({ state: "idle" });
+        return;
+
+      default:
+        exhaustiveSwitch(cursorState);
+    }
 
     if (sprite) {
       setCursor({
@@ -100,6 +122,12 @@ export default function App() {
     })();
   };
 
+  useEffect(() => {
+    if (localStorage.getItem("boomer-doc-exists")) {
+      doLoad();
+    }
+  }, []);
+
   return (
     <>
       <div style={{ display: "flex", flexDirection: "row" }}>
@@ -132,9 +160,22 @@ export default function App() {
               }
             }}
           />
+          <Divider />
+          <Button
+            small
+            icon="new-text-box"
+            // text={mode.state === "running" ? "Running" : "Editing"}
+            onClick={() => {
+              if (cursor.state !== "placing-text") {
+                setCursor({ state: "placing-text" });
+              } else {
+                setCursor({ state: "idle" });
+              }
+            }}
+          />
         </ButtonGroup>
       </div>
-      <pre>{JSON.stringify(cursor)}</pre>
+      <pre>Cursor: {JSON.stringify(cursor)}</pre>
 
       <div
         style={{
@@ -177,7 +218,7 @@ export default function App() {
           {cursor.state === "selecting" && <SelectionBox />}
         </div>
 
-        <LayersAndTiles
+        <SidebarInspector
           engineState={engineState}
           selectSingleSprite={selectSingleSprite}
           tiles={tiles}
@@ -299,9 +340,8 @@ function TransformBox({
   );
 }
 
-function LayersAndTiles({
+function SidebarInspector({
   engineState,
-  selection,
   tiles,
   selectSingleSprite,
 }: {
@@ -310,7 +350,58 @@ function LayersAndTiles({
   tiles: Tiles | null;
   selectSingleSprite: (sprite: Sprite | null) => void;
 }) {
+  const [selection, setSelection] = useAtom(selectionState);
   const [selectedTab, setSelectedTab] = useState<TabId>("layers");
+
+  // important: hotkeys array must be memoized to avoid infinitely re-binding hotkeys
+  const hotkeys = useMemo(
+    () => [
+      {
+        combo: "down",
+        label: "Select next sprite",
+        group: "layer-list",
+        onKeyDown: () => {
+          if (selection.state !== "engine-object") {
+            return;
+          }
+
+          const lastSelectedItem = selection.eos[selection.eos.length - 1];
+          const indexOfItem = engineState.objects.indexOf(lastSelectedItem);
+          if (indexOfItem < 0 || indexOfItem + 1 >= engineState.objects.size) {
+            return;
+          }
+
+          setSelection({
+            state: "engine-object",
+            eos: [engineState.objects.get(indexOfItem + 1)],
+          });
+        },
+      },
+      {
+        combo: "up",
+        label: "Select previous sprite",
+        group: "layer-list",
+        onKeyDown: () => {
+          if (selection.state !== "engine-object") {
+            return;
+          }
+
+          const firstSelectedItem = selection.eos[0];
+          const indexOfItem = engineState.objects.indexOf(firstSelectedItem);
+          if (indexOfItem < 0 || indexOfItem <= 0) {
+            return;
+          }
+
+          setSelection({
+            state: "engine-object",
+            eos: [engineState.objects.get(indexOfItem - 1)],
+          });
+        },
+      },
+    ],
+    [engineState, selection, setSelection]
+  );
+  const { handleKeyDown, handleKeyUp } = useHotkeys(hotkeys);
 
   const addRandomTile = useCallback(async () => {
     if (!tiles) {
@@ -319,7 +410,7 @@ function LayersAndTiles({
     const sprite = await tiles.genSprite((Math.random() * 100) >> 0);
     sprite.x = (Math.random() * 100) >> 0;
     sprite.y = (Math.random() * 100) >> 0;
-    engineState.addSprite(sprite);
+    engineState.addEngineObject(sprite);
     (window as any).es = engineState;
   }, [engineState, tiles]);
 
@@ -335,6 +426,9 @@ function LayersAndTiles({
           title="Layers"
           panel={
             <div
+              tabIndex={0}
+              onKeyDown={handleKeyDown}
+              onKeyUp={handleKeyUp}
               style={{
                 display: "flex",
                 flexDirection: "column",
@@ -361,7 +455,7 @@ function LayersAndTiles({
                       selectSingleSprite(isSelected ? null : eo);
                     }}
                   >
-                    Sprite {i}
+                    {eo.id ? eo.id : `<Sprite ${i}>`}
                   </div>
                 );
               })}

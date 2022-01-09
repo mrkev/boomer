@@ -1,9 +1,23 @@
 TODO
 
-TODO: copy on code editor gets intercepted by sprite copy
-Syntax error in script crashes whole app
-Icon next to sprites with script
-Display id not "Sprite N"
-Drag to re-order sprites
-Cmd+S
-Cmd+Z
+[ ] TODO: copy on code editor gets intercepted by sprite copy
+[ ] Syntax error in script crashes whole app
+[ ] Icon next to sprites with script
+[ ] Display id not "Sprite N"
+[ ] Drag to re-order sprites
+[x] Cmd+S
+[ ] Cmd+Z
+[ ] Insert text
+[x] Esc to unselect
+[ ] Cmd+R (or Cmd+Enter?) to run
+[ ] Omni-bar
+[ ] Warn if multiple items have the same id
+[ ] math on number inputs, on props fields
+[ ] snap to other objects' gridlines
+[ ] ableton-like help based on cursor state and position (hover)?
+
+commands:
+
+{key: 's', mods: ['cmd'], onKeydown: () => {
+
+} }

@@ -1,5 +1,6 @@
 import { EngineObject } from "./Engine";
 import { atom } from "jotai";
+import { LinkedState } from "./lib/LinkedState";
 
 type DraftTransform = {
   eo: EngineObject;
@@ -19,6 +20,9 @@ type CursorState =
       canvasStart: [number, number];
       clientStart: [number, number];
       size: [number, number];
+    }
+  | {
+      state: "placing-text";
     };
 
 export const cursorState = atom<CursorState>({

@@ -133,7 +133,7 @@ export function PropsEditor() {
     // >
     <div
       style={{
-        background: "red",
+        // background: "red",
         display: "flex",
         flexDirection: "row",
         width: "100%",
@@ -219,6 +219,7 @@ function CodeEditor({ engineObject: eo }: { engineObject: EngineObject }) {
     <Editor
       options={{ minimap: { enabled: false }, tabSize: 2, insertSpaces: true }}
       width="100%"
+      theme="vs-dark"
       height="100%"
       defaultLanguage="javascript"
       defaultValue={eo._script}
