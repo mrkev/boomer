@@ -25,7 +25,7 @@ type CursorState =
       state: "placing-text";
     };
 
-export const cursorState = atom<CursorState>({
+export const cursorState = LinkedState.of<CursorState>({
   state: "idle",
 });
 
@@ -33,7 +33,7 @@ export type SelectionState =
   | { state: "idle" }
   | { state: "engine-object"; eos: Array<EngineObject> };
 
-export const selectionState = atom<SelectionState>({
+export const selectionState = LinkedState.of<SelectionState>({
   state: "idle",
 });
 

@@ -1,8 +1,9 @@
-import { Key, useEffect } from "react";
+import { useEffect } from "react";
 import { EngineState, Sprite, Tiles } from "./Engine";
 import { useAtom } from "jotai";
 import { modeState, selectionState } from "./AppState";
 import { doSave, hydrateFor } from "./Document";
+import { useLinkedState } from "./lib/LinkedState";
 
 export const pressedKeySet: Set<string> = new Set();
 
@@ -77,7 +78,7 @@ export function useAppKeyboardEvents(
   engineState: EngineState,
   tiles: Tiles | null
 ) {
-  const [selection, setSelection] = useAtom(selectionState);
+  const [selection, setSelection] = useLinkedState(selectionState);
   const [mode] = useAtom(modeState);
 
   useEffect(() => {
@@ -116,6 +117,11 @@ export function useAppKeyboardEvents(
             engineState.removeEngineObject(eo);
             setSelection({ state: "idle" });
           }
+          break;
+        }
+
+        case "Escape": {
+          // if (cursor)
           break;
         }
 

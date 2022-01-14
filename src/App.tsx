@@ -1,47 +1,32 @@
-import React, {
-  createRef,
-  useCallback,
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
+import React, { useEffect, useRef, useState } from "react";
 
 import "./App.css";
-import { Tiles, EngineState, Sprite, EngineObject, Text } from "./Engine";
+import { Tiles, EngineState, EngineObject, Text } from "./Engine";
 import { EngineComponent, EngineMouseEvent } from "./EngineComponent";
 import { useAtom } from "jotai";
 import {
   cursorState,
   exhaustiveSwitch,
   modeState,
-  SelectionState,
   selectionState,
 } from "./AppState";
 import { useAppMouseCursor } from "./useAppMouseCursor";
-import { mapSet } from "./mapSet";
 import { useAppKeyboardEvents } from "./useAppKeyboardEvents";
 import { deserialize, doSave } from "./Document";
 import { minSpanningRect, Rect } from "./Rect";
 import { PropsEditor } from "./PropsEditor";
-import {
-  Button,
-  ButtonGroup,
-  Divider,
-  Tab,
-  Tabs,
-  TabId,
-  useHotkeys,
-} from "@blueprintjs/core";
-import { useRef } from "react";
+import { Button, ButtonGroup, Divider } from "@blueprintjs/core";
+import { useLinkedState } from "./lib/LinkedState";
+import { SidebarInspector } from "./SidebarInspector";
 
 const CANVAS_SIZE: [number, number] = [300, 150];
 
 export default function App() {
-  const [selection, setSelection] = useAtom(selectionState);
+  const [selection, setSelection] = useLinkedState(selectionState);
   const [tiles, setTiles] = useState<Tiles | null>(null);
   const [engineState, setEngineState] = useState(new EngineState());
   const [mode, setMode] = useAtom(modeState);
-  const [cursor, setCursor] = useAtom(cursorState);
+  const [cursor, setCursor] = useLinkedState(cursorState);
 
   useAppMouseCursor(engineState, CANVAS_SIZE);
   useAppKeyboardEvents(engineState, tiles);
@@ -222,7 +207,6 @@ export default function App() {
           engineState={engineState}
           selectSingleSprite={selectSingleSprite}
           tiles={tiles}
-          selection={selection}
         />
 
         {/* </SplitPane> */}
@@ -233,7 +217,7 @@ export default function App() {
 }
 
 function SelectionBox() {
-  const [cursor] = useAtom(cursorState);
+  const [cursor] = useLinkedState(cursorState);
 
   if (cursor.state !== "selecting") {
     return null;
@@ -271,25 +255,57 @@ function TransformBox({
 }: {
   engineObjects: Array<EngineObject>;
 }) {
-  const [cursor, setCursor] = useAtom(cursorState);
-  const eosRects = eos.map((eo) => [eo.x, eo.y, eo.width, eo.height] as Rect);
-  const minRect = minSpanningRect(eosRects);
+  const [cursor, setCursor] = useLinkedState(cursorState);
+  // const eosRects = eos.map((eo) => [eo.x, eo.y, eo.width, eo.height] as Rect);
+  // const minRect = minSpanningRect(eosRects);
+  const divRef = useRef<HTMLDivElement>(null);
 
-  if (minRect === null) {
-    return null;
-  }
+  useEffect(
+    function () {
+      let raf = requestAnimationFrame(function transformBoxUpdate() {
+        // const cursor = cursorState.__getLinkedValue();
+        const eosRects = eos.map(
+          (eo) => [eo.x, eo.y, eo.width, eo.height] as Rect
+        );
+        const minRect = minSpanningRect(eosRects);
+        if (minRect === null) {
+          return null;
+        }
 
-  const [x, y, width, height] = minRect;
+        const [x, y, width, height] = minRect;
+
+        const div = divRef.current;
+        if (div) {
+          div.style.width = `${width * devicePixelRatio}px`;
+          div.style.height = `${height * devicePixelRatio}px`;
+          div.style.top = `${y * devicePixelRatio}px`;
+          div.style.left = `${x * devicePixelRatio}px`;
+        }
+
+        raf = requestAnimationFrame(transformBoxUpdate);
+      });
+
+      return () => cancelAnimationFrame(raf);
+    },
+    [eos]
+  );
+
+  // if (minRect === null) {
+  //   return null;
+  // }
+
+  // const [x, y, width, height] = minRect;
 
   return (
     <div
+      ref={divRef}
       style={{
         position: "absolute",
         border: "3px dashed white",
-        width: width * devicePixelRatio,
-        height: height * devicePixelRatio,
-        top: y * devicePixelRatio,
-        left: x * devicePixelRatio,
+        // width: width * devicePixelRatio,
+        // height: height * devicePixelRatio,
+        // top: y * devicePixelRatio,
+        // left: x * devicePixelRatio,
         boxSizing: "border-box",
         background: "rgba(99, 99, 255, 0.5)",
         // grabbing is set on useAppMouseCursor
@@ -336,135 +352,6 @@ function TransformBox({
         }
         return <div key={pos} style={style}></div>;
       })}
-    </div>
-  );
-}
-
-function SidebarInspector({
-  engineState,
-  tiles,
-  selectSingleSprite,
-}: {
-  engineState: EngineState;
-  selection: SelectionState;
-  tiles: Tiles | null;
-  selectSingleSprite: (sprite: Sprite | null) => void;
-}) {
-  const [selection, setSelection] = useAtom(selectionState);
-  const [selectedTab, setSelectedTab] = useState<TabId>("layers");
-
-  // important: hotkeys array must be memoized to avoid infinitely re-binding hotkeys
-  const hotkeys = useMemo(
-    () => [
-      {
-        combo: "down",
-        label: "Select next sprite",
-        group: "layer-list",
-        onKeyDown: () => {
-          if (selection.state !== "engine-object") {
-            return;
-          }
-
-          const lastSelectedItem = selection.eos[selection.eos.length - 1];
-          const indexOfItem = engineState.objects.indexOf(lastSelectedItem);
-          if (indexOfItem < 0 || indexOfItem + 1 >= engineState.objects.size) {
-            return;
-          }
-
-          setSelection({
-            state: "engine-object",
-            eos: [engineState.objects.get(indexOfItem + 1)],
-          });
-        },
-      },
-      {
-        combo: "up",
-        label: "Select previous sprite",
-        group: "layer-list",
-        onKeyDown: () => {
-          if (selection.state !== "engine-object") {
-            return;
-          }
-
-          const firstSelectedItem = selection.eos[0];
-          const indexOfItem = engineState.objects.indexOf(firstSelectedItem);
-          if (indexOfItem < 0 || indexOfItem <= 0) {
-            return;
-          }
-
-          setSelection({
-            state: "engine-object",
-            eos: [engineState.objects.get(indexOfItem - 1)],
-          });
-        },
-      },
-    ],
-    [engineState, selection, setSelection]
-  );
-  const { handleKeyDown, handleKeyUp } = useHotkeys(hotkeys);
-
-  const addRandomTile = useCallback(async () => {
-    if (!tiles) {
-      return;
-    }
-    const sprite = await tiles.genSprite((Math.random() * 100) >> 0);
-    sprite.x = (Math.random() * 100) >> 0;
-    sprite.y = (Math.random() * 100) >> 0;
-    engineState.addEngineObject(sprite);
-    (window as any).es = engineState;
-  }, [engineState, tiles]);
-
-  return (
-    <div style={{ flexGrow: 1, padding: "0px 8px" }}>
-      <Tabs
-        id="LayersAndTiles"
-        selectedTabId={selectedTab}
-        onChange={(id) => setSelectedTab(id)}
-      >
-        <Tab
-          id="layers"
-          title="Layers"
-          panel={
-            <div
-              tabIndex={0}
-              onKeyDown={handleKeyDown}
-              onKeyUp={handleKeyUp}
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                flexGrow: 1,
-              }}
-            >
-              {mapSet(engineState.objects, (eo, i) => {
-                if (!(eo instanceof Sprite)) {
-                  return;
-                }
-
-                const isSelected =
-                  selection.state === "engine-object" &&
-                  selection.eos.includes(eo);
-
-                return (
-                  <div
-                    key={i}
-                    style={{
-                      background: isSelected ? "red" : undefined,
-                      cursor: "pointer",
-                    }}
-                    onClick={() => {
-                      selectSingleSprite(isSelected ? null : eo);
-                    }}
-                  >
-                    {eo.id ? eo.id : `<Sprite ${i}>`}
-                  </div>
-                );
-              })}
-              <button onClick={() => addRandomTile()}>Add random tile</button>
-            </div>
-          }
-        />
-        <Tab id="tiles" title="Tiles" panel={<div />} />
-      </Tabs>
     </div>
   );
 }

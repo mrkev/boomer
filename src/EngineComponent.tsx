@@ -1,17 +1,6 @@
 import React, { useCallback, useEffect, useRef } from "react";
-import {
-  EngineState,
-  Sprite,
-  EOProxyForScripting,
-  EngineObject,
-} from "./Engine";
-import {
-  degVectorFromAToB,
-  radVectorFromAToB,
-  rectCenter,
-  rectOverlap,
-  rectSubset,
-} from "./Rect";
+import { EngineState, EOProxyForScripting, EngineObject } from "./Engine";
+import { degVectorFromAToB, rectCenter, rectOverlap } from "./Rect";
 import { useGlobalPressedKeySet } from "./useAppKeyboardEvents";
 
 /** Pixel-perfect and scaled coordinates of mouse/pointer events */
@@ -32,7 +21,7 @@ function getObjectAtCoords(
   let clickedSprite = null;
   // set order is insertion order, but we want to find the top-most sprite
   // at a coordinate, not the bottom-most
-  for (let i = engineState.objects.size - 1; i > 0; i--) {
+  for (let i = engineState.objects.size - 1; i >= 0; i--) {
     const obj = engineState.objects.get(i);
 
     if (
@@ -158,7 +147,7 @@ export function EngineComponent({
     else {
       initializeRun(engineState, canvasRef.current, pressedKeySet);
     }
-  }, [engineState, mode]);
+  }, [engineState, mode, pressedKeySet]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -169,9 +158,6 @@ export function EngineComponent({
     if (!ctx) {
       return;
     }
-    // const pixelRatio = window.devicePixelRatio;
-    // const thickness = 5;
-    // ctx.lineWidth = thickness * pixelRatio;
     let raf = requestAnimationFrame(function gameLoop() {
       engineState.render(ctx, canvas.width, canvas.height);
       if (mode === "running") {

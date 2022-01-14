@@ -9,13 +9,14 @@ import {
   selectionState,
 } from "./AppState";
 import { rectSubset } from "./Rect";
+import { useLinkedState } from "./lib/LinkedState";
 
 export function useAppMouseCursor(
   engineState: EngineState,
   canvasSize: [number, number]
 ) {
-  const [cursor, setCursor] = useAtom(cursorState);
-  const [_, setSelection] = useAtom(selectionState);
+  const [cursor, setCursor] = useLinkedState(cursorState);
+  const [_, setSelection] = useLinkedState(selectionState);
   const [mode] = useAtom(modeState);
 
   useEffect(() => {

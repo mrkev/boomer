@@ -3,12 +3,12 @@ import Editor, { BeforeMount, OnChange, OnMount } from "@monaco-editor/react";
 import { EngineObject } from "./Engine";
 import { editor } from "monaco-editor";
 import SplitPane from "react-split-pane";
-import { useAtom } from "jotai";
 import { selectionState } from "./AppState";
 import { NonIdealState } from "@blueprintjs/core";
+import { useLinkedState } from "./lib/LinkedState";
 
-export function PropsEditor() {
-  const [selection] = useAtom(selectionState);
+export const PropsEditor = React.memo(function PropsEditor() {
+  const [selection] = useLinkedState(selectionState);
   const elRefs = useRef<Record<string, RefObject<HTMLInputElement>>>({});
   // const t2Ref = useRef<HTMLTableSectionElement | null>(null);
   const [_, update] = useState({});
@@ -186,7 +186,7 @@ export function PropsEditor() {
       </pre> */}
     </div>
   );
-}
+});
 
 function CodeEditor({ engineObject: eo }: { engineObject: EngineObject }) {
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
