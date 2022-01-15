@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useRef } from "react";
 import { EngineState, EOProxyForScripting, EngineObject } from "./Engine";
 import { degVectorFromAToB, rectCenter, rectOverlap } from "./Rect";
 import { useGlobalPressedKeySet } from "./useAppKeyboardEvents";
+import { Engine as MatterEngine } from "matter-js";
 
 /** Pixel-perfect and scaled coordinates of mouse/pointer events */
 function getEventCanvasCoordinates(
@@ -145,6 +146,7 @@ export function EngineComponent({
     }
     // On RUN
     else {
+      engineState.resetPhysics();
       initializeRun(engineState, canvasRef.current, pressedKeySet);
     }
   }, [engineState, mode, pressedKeySet]);
@@ -158,12 +160,21 @@ export function EngineComponent({
     if (!ctx) {
       return;
     }
-    let raf = requestAnimationFrame(function gameLoop() {
-      engineState.render(ctx, canvas.width, canvas.height);
+    let lastTime = -1;
+    let raf = requestAnimationFrame(function gameLoop(time) {
       if (mode === "running") {
         dispatchFrameEventToAll(engineState);
       }
+
+      if (mode === "running") {
+        const deltaTime = lastTime > 0 ? time - lastTime : 1000 / 60;
+        MatterEngine.update(engineState.physicsEngine, deltaTime);
+        engineState.commitPhysics();
+      }
+
+      engineState.render(ctx, canvas.width, canvas.height);
       raf = requestAnimationFrame(gameLoop);
+      lastTime = time;
     });
     return () => {
       cancelAnimationFrame(raf);

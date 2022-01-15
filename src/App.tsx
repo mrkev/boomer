@@ -1,14 +1,14 @@
 import React, { useEffect, useRef, useState } from "react";
 
 import "./App.css";
-import { Tiles, EngineState, EngineObject, Text } from "./Engine";
+import { Tiles, EngineState, EngineObject, Text, Box } from "./Engine";
 import { EngineComponent, EngineMouseEvent } from "./EngineComponent";
 import { useAtom } from "jotai";
 import {
   cursorState,
   exhaustiveSwitch,
   modeState,
-  selectionState,
+  useAppSelectionState,
 } from "./AppState";
 import { useAppMouseCursor } from "./useAppMouseCursor";
 import { useAppKeyboardEvents } from "./useAppKeyboardEvents";
@@ -22,7 +22,7 @@ import { SidebarInspector } from "./SidebarInspector";
 const CANVAS_SIZE: [number, number] = [300, 150];
 
 export default function App() {
-  const [selection, setSelection] = useLinkedState(selectionState);
+  const [selection, setEOSelection] = useAppSelectionState();
   const [tiles, setTiles] = useState<Tiles | null>(null);
   const [engineState, setEngineState] = useState(new EngineState());
   const [mode, setMode] = useAtom(modeState);
@@ -39,21 +39,13 @@ export default function App() {
     loadTiles();
   }, [engineState]);
 
-  const selectSingleSprite = function (sprite: EngineObject | null) {
-    if (sprite) {
-      setSelection({ state: "engine-object", eos: [sprite] });
-    } else {
-      setSelection({ state: "idle" });
-    }
-  };
-
   const engineMouseDown = function ({
     sprite,
     nativeEvent: ne,
     x,
     y,
   }: EngineMouseEvent) {
-    selectSingleSprite(sprite);
+    setEOSelection(sprite === null ? [] : [sprite]);
     const cursorState = cursor.state;
 
     switch (cursorState) {
@@ -67,6 +59,18 @@ export default function App() {
         // TODO: place text
         const text = new Text(x, y, "hello world");
         engineState.addEngineObject(text);
+        setCursor({ state: "idle" });
+        return;
+      case "placing-box":
+        // TODO: place text
+        const box = new Box({
+          x,
+          y,
+          width: 20,
+          height: 20,
+        });
+        engineState.addEngineObject(box);
+        engineState.enablePhysicsForObject(box);
         setCursor({ state: "idle" });
         return;
 
@@ -148,8 +152,22 @@ export default function App() {
           <Divider />
           <Button
             small
+            active={
+              cursor.state === "idle" ||
+              cursor.state === "selecting" ||
+              cursor.state === "moving"
+            }
+            icon="arrow-top-left"
+            onClick={() => {
+              if (cursor.state !== "idle") {
+                setCursor({ state: "idle" });
+              }
+            }}
+          />
+          <Button
+            small
+            active={cursor.state === "placing-text"}
             icon="new-text-box"
-            // text={mode.state === "running" ? "Running" : "Editing"}
             onClick={() => {
               if (cursor.state !== "placing-text") {
                 setCursor({ state: "placing-text" });
@@ -158,9 +176,32 @@ export default function App() {
               }
             }}
           />
+          <Button
+            small
+            active={cursor.state === "placing-box"}
+            icon="square"
+            onClick={() => {
+              if (cursor.state !== "placing-box") {
+                setCursor({ state: "placing-box" });
+              } else {
+                setCursor({ state: "idle" });
+              }
+            }}
+          />
         </ButtonGroup>
       </div>
-      <pre>Cursor: {JSON.stringify(cursor)}</pre>
+      <pre>
+        Cursor:{" "}
+        {JSON.stringify(cursor, function (key, val) {
+          if (!(val instanceof Object)) {
+            return val;
+          } else if (val.__getSerialRepresentation) {
+            return val.__getSerialRepresentation();
+          } else {
+            return val;
+          }
+        })}
+      </pre>
 
       <div
         style={{
@@ -203,11 +244,7 @@ export default function App() {
           {cursor.state === "selecting" && <SelectionBox />}
         </div>
 
-        <SidebarInspector
-          engineState={engineState}
-          selectSingleSprite={selectSingleSprite}
-          tiles={tiles}
-        />
+        <SidebarInspector engineState={engineState} tiles={tiles} />
 
         {/* </SplitPane> */}
       </div>

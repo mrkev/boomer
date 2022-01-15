@@ -2,14 +2,20 @@ import React, { RefObject, useEffect, useRef, useState } from "react";
 import Editor, { BeforeMount, OnChange, OnMount } from "@monaco-editor/react";
 import { EngineObject } from "./Engine";
 import { editor } from "monaco-editor";
-import SplitPane from "react-split-pane";
-import { selectionState } from "./AppState";
-import { NonIdealState } from "@blueprintjs/core";
+import {
+  openObjectsState,
+  selectionState,
+  useAppSelectionState,
+} from "./AppState";
+import { NonIdealState, Tab, TabId, Tabs } from "@blueprintjs/core";
 import { useLinkedState } from "./lib/LinkedState";
 
 export const PropsEditor = React.memo(function PropsEditor() {
-  const [selection] = useLinkedState(selectionState);
+  const [selection, setEOSelection] = useAppSelectionState();
+  const [openObjects] = useLinkedState(openObjectsState);
   const elRefs = useRef<Record<string, RefObject<HTMLInputElement>>>({});
+  const [selectedTab, setSelectedTab] = useState<TabId>("layers");
+
   // const t2Ref = useRef<HTMLTableSectionElement | null>(null);
   const [_, update] = useState({});
 
@@ -91,7 +97,7 @@ export const PropsEditor = React.memo(function PropsEditor() {
         <input
           ref={elRefs.current[key]}
           type={"text"}
-          value={JSON.stringify(value)}
+          value={value instanceof Object ? "<Object>" : JSON.stringify(value)}
           disabled
         ></input>
       );
@@ -140,8 +146,21 @@ export const PropsEditor = React.memo(function PropsEditor() {
         height: "40vh",
       }}
     >
-      <div style={{ flexGrow: 1 }}>
-        <CodeEditor engineObject={eo} />
+      <div style={{ flexGrow: 1, display: "flex", flexDirection: "column" }}>
+        <Tabs
+          id="LayersAndTiles"
+          selectedTabId={selection.eos[0].id || ""}
+          onChange={(id) => setSelectedTab(id)}
+        >
+          {[...openObjects].map(function (eo, i) {
+            return <Tab id={eo.id || i} title={eo.id || "Object"}></Tab>;
+          })}
+          <Tab id="layers" title="Layers" />
+          <Tab id="tiles" title="Tiles" />
+        </Tabs>
+        <div style={{ width: "100%", flexGrow: 1 }}>
+          <CodeEditor engineObject={eo} />
+        </div>
       </div>
 
       <table style={{ width: 200, alignSelf: "flex-start" }}>
@@ -149,42 +168,6 @@ export const PropsEditor = React.memo(function PropsEditor() {
       </table>
     </div>
     // </SplitPane>
-  );
-
-  return (
-    <div style={{ display: "flex", flexDirection: "row" }}>
-      <SplitPane split="vertical" defaultSize="50%">
-        {/* <div>default percentage: 50%</div> */}
-        <CodeEditor engineObject={eo} />
-
-        <table>
-          <tbody>{fields}</tbody>
-        </table>
-        {/* <div /> */}
-      </SplitPane>
-
-      {/* <table>
-        <tbody ref={t2Ref}></tbody>
-      </table> */}
-      {/* <pre>
-        {eo.constructor.name}{" "}
-        {JSON.stringify(
-          eo,
-          (key, value) => {
-            if (key[0] === "_") {
-              return undefined;
-            }
-
-            if (typeof value === "number") {
-              return <input type="number" />;
-            }
-
-            return value;
-          },
-          2
-        )}
-      </pre> */}
-    </div>
   );
 });
 

@@ -9,10 +9,12 @@
   "dependencies": {
     "@blueprintjs/core": "^3.52.0",
     "@monaco-editor/react": "^4.3.1",
+    "@types/matter-js": "^0.17.6",
     "@types/styled-components": "^5.1.19",
     "@types/xstyled__styled-components": "^1.19.2",
     "esbuild": "^0.14.11",
     "jotai": "^1.4.9",
+    "matter-js": "^0.18.0",
     "monaco-editor": "^0.31.1",
     "react": "^18.0.0-rc.0",
     "react-dom": "^18.0.0-rc.0",

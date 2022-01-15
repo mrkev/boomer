@@ -31,6 +31,9 @@ export function useAppMouseCursor(
       case "moving":
         window.document.body.style.cursor = "grabbing";
         break;
+      case "placing-box":
+        window.document.body.style.cursor = "crosshair";
+        break;
       default:
         exhaustiveSwitch(cursor);
     }
@@ -61,8 +64,8 @@ export function useAppMouseCursor(
 
           for (const { eo, start } of engineObjects) {
             const [x, y] = vadd(start, vfloor(delta));
-            eo.x = x;
-            eo.y = y;
+            eo._proxyForScripting.x = x;
+            eo._proxyForScripting.y = y;
           }
           break;
         }
@@ -82,6 +85,10 @@ export function useAppMouseCursor(
           break;
         }
         case "placing-text":
+          break;
+
+        case "placing-box":
+          // TODO: box size
           break;
         default:
           exhaustiveSwitch(cursor);
@@ -127,6 +134,7 @@ export function useAppMouseCursor(
           break;
 
         case "placing-text":
+        case "placing-box":
           // handled on canvas mouseUp listener
           break;
         default:
@@ -142,6 +150,7 @@ export function useAppMouseCursor(
         case "moving":
         case "selecting":
         case "placing-text":
+        case "placing-box":
           setCursor({ state: "idle" });
           break;
         default:

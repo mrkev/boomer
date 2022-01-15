@@ -1,6 +1,8 @@
 import { EngineObject } from "./Engine";
 import { atom } from "jotai";
-import { LinkedState } from "./lib/LinkedState";
+import { LinkedState, useLinkedState } from "./lib/LinkedState";
+import { useCallback } from "react";
+import OrderedSet from "./OrderedSet";
 
 type DraftTransform = {
   eo: EngineObject;
@@ -23,6 +25,9 @@ type CursorState =
     }
   | {
       state: "placing-text";
+    }
+  | {
+      state: "placing-box";
     };
 
 export const cursorState = LinkedState.of<CursorState>({
@@ -36,6 +41,35 @@ export type SelectionState =
 export const selectionState = LinkedState.of<SelectionState>({
   state: "idle",
 });
+
+// TODO: only scriptable objects?
+export const openObjectsState = LinkedState.of<OrderedSet<EngineObject>>(
+  new OrderedSet<EngineObject>()
+);
+
+export function useAppSelectionState(): [
+  SelectionState,
+  (value: Array<EngineObject>) => void
+] {
+  const [selection, _setSelection] = useLinkedState(selectionState);
+  const setEOSelection = useCallback(
+    function (newSelection: Array<EngineObject>) {
+      switch (newSelection.length) {
+        case 0:
+          _setSelection({ state: "idle" });
+          break;
+        case 1:
+          openObjectsState.__getLinkedValue().add(newSelection[0]);
+        default:
+          _setSelection({ state: "engine-object", eos: newSelection });
+          break;
+      }
+    },
+    [_setSelection]
+  );
+
+  return [selection, setEOSelection];
+}
 
 type ModeState = { state: "editing" } | { state: "running" };
 export const modeState = atom<ModeState>({

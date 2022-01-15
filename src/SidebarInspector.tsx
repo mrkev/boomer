@@ -1,6 +1,10 @@
 import React, { useCallback, useMemo, useState } from "react";
 import { Tiles, EngineState, Sprite } from "./Engine";
-import { SelectionState, selectionState } from "./AppState";
+import {
+  SelectionState,
+  selectionState,
+  useAppSelectionState,
+} from "./AppState";
 import { mapSet } from "./mapSet";
 import { Tab, Tabs, TabId, useHotkeys } from "@blueprintjs/core";
 import { useLinkedState } from "./lib/LinkedState";
@@ -63,14 +67,12 @@ function useSidebarInspectorHotkeys(engineState: EngineState) {
 export function SidebarInspector({
   engineState,
   tiles,
-  selectSingleSprite,
 }: {
   engineState: EngineState;
   tiles: Tiles | null;
-  selectSingleSprite: (sprite: Sprite | null) => void;
 }) {
-  const [selection] = useLinkedState(selectionState);
   const [selectedTab, setSelectedTab] = useState<TabId>("layers");
+  const [selection, setEOSelection] = useAppSelectionState();
 
   const { handleKeyDown, handleKeyUp } =
     useSidebarInspectorHotkeys(engineState);
@@ -124,7 +126,7 @@ export function SidebarInspector({
                       cursor: "pointer",
                     }}
                     onClick={() => {
-                      selectSingleSprite(isSelected ? null : eo);
+                      setEOSelection(isSelected ? [] : [eo]);
                     }}
                   >
                     {eo.id ? eo.id : `<Sprite ${i}>`}

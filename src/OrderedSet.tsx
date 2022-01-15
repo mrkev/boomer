@@ -14,9 +14,10 @@ export class OrderedSet<T> extends Set<T> {
   }
 
   override add(value: T): this {
-    super.add.call(this, value);
-    // console.log("")
-    this.#order.push(value);
+    if (!this.has(value)) {
+      super.add.call(this, value);
+      this.#order.push(value);
+    }
     return this;
   }
 
