@@ -1,5 +1,6 @@
 import { assert } from "./assert";
-import { EngineObject, EngineState, Sprite, Tiles } from "./Engine";
+import { EngineObject, Sprite, Tiles } from "./Engine";
+import { EngineState } from "./EngineState";
 
 export const doSave = (engineState: EngineState, tiles: Tiles) => {
   if (!confirm("This will override all data. Are you sure")) {
@@ -33,9 +34,10 @@ export class Doc_V1 {
   }
 }
 
-export function serializeDoc(doc: Doc_V1, pretty?: boolean) {
+function serializeDoc(doc: Doc_V1, pretty?: boolean) {
   return serialize(doc, pretty);
 }
+
 export function serialize(obj: unknown, pretty?: boolean) {
   return JSON.stringify(
     obj,

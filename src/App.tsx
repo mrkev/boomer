@@ -1,7 +1,8 @@
 import React, { useEffect, useRef, useState } from "react";
 
 import "./App.css";
-import { Tiles, EngineState, EngineObject, Text, Box } from "./Engine";
+import { Tiles, EngineObject, Text, Box } from "./Engine";
+import { EngineState } from "./EngineState";
 import { EngineComponent, EngineMouseEvent } from "./EngineComponent";
 import { useAtom } from "jotai";
 import {
@@ -92,6 +93,14 @@ export default function App() {
         size: [0, 0],
       });
     }
+  };
+
+  const engineDoubleClick = (e: EngineMouseEvent) => {
+    if (!(e.sprite instanceof Text)) {
+      return;
+    }
+
+    console.log("TODO: edit text");
   };
 
   const doLoad = () => {
@@ -236,6 +245,7 @@ export default function App() {
             state={engineState}
             // todo: rename sprite to object
             onMouseDown={engineMouseDown}
+            onDoubleClick={engineDoubleClick}
             mode={mode.state}
           />
           {selection.state === "engine-object" && mode.state === "editing" && (

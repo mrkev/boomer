@@ -1,5 +1,6 @@
 import { useEffect } from "react";
-import { EngineState, Sprite, Tiles } from "./Engine";
+import { Sprite, Tiles } from "./Engine";
+import { EngineState } from "./EngineState";
 import { useAtom } from "jotai";
 import { modeState, selectionState } from "./AppState";
 import { doSave, hydrateFor } from "./Document";

@@ -1,4 +1,4 @@
-import { EngineState } from "./Engine";
+import { EngineState } from "./EngineState";
 import { useAtom } from "jotai";
 import { useEffect } from "react";
 import { vdiv, vsub, vadd, vfloor } from "./Vector";

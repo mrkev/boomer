@@ -1,13 +1,8 @@
 import { serialize } from "./Document";
-import OrderedSet from "./OrderedSet";
 import { degVectorFromAToB, Rect, rectCenter, rectOverlap } from "./Rect";
-import {
-  Engine as MatterEngine,
-  Bodies as MatterBodies,
-  Body as MatterBody,
-  Composite as MatterComposite,
-} from "matter-js";
+import { Body as MatterBody } from "matter-js";
 import Matter from "matter-js";
+import { shortUUID } from "./lib/uuid";
 
 export class Tiles {
   readonly url: string;
@@ -95,9 +90,10 @@ export class Tiles {
 // TODO: rename __getSerialRepresentation() to __getSerializableRepresentation
 
 export abstract class EngineObject {
-  id: null | string = null;
-  physicsBox: MatterBody | null = null;
+  _uuid: string = shortUUID();
+  _physicsBox: MatterBody | null = null;
 
+  id: null | string = null;
   x: number;
   y: number;
   width: number;
@@ -223,8 +219,8 @@ export class EOProxyForScripting {
   }
   set x(n: number) {
     this.#eo.x = n;
-    if (this.#eo.physicsBox) {
-      Matter.Body.setPosition(this.#eo.physicsBox, {
+    if (this.#eo._physicsBox) {
+      Matter.Body.setPosition(this.#eo._physicsBox, {
         x: n,
         y: this.#eo.y,
       });
@@ -236,8 +232,8 @@ export class EOProxyForScripting {
   }
   set y(n: number) {
     this.#eo.y = n;
-    if (this.#eo.physicsBox) {
-      Matter.Body.setPosition(this.#eo.physicsBox, {
+    if (this.#eo._physicsBox) {
+      Matter.Body.setPosition(this.#eo._physicsBox, {
         y: n,
         x: this.#eo.x,
       });
@@ -306,7 +302,7 @@ export class Box extends EngineObject implements Serializable {
   }
 }
 
-interface Serializable {
+export interface Serializable {
   __getSerialRepresentation(): Record<string, any>;
 }
 
@@ -366,75 +362,5 @@ export class Sprite extends EngineObject {
     const type = "text/plain";
     const blob = new Blob([bytes], { type });
     return new ClipboardItem({ [type]: blob });
-  }
-}
-
-export class EngineState {
-  readonly physicsEngine = MatterEngine.create({
-    gravity: { x: 0, y: 0 },
-  });
-  readonly objects: OrderedSet<EngineObject> = new OrderedSet<EngineObject>();
-  private _debug_spriteBoxes = true;
-  _globalScript = "";
-
-  addEngineObject(eo: EngineObject) {
-    this.objects.add(eo);
-  }
-
-  removeEngineObject(eo: EngineObject) {
-    this.objects.delete(eo);
-  }
-
-  resetPhysics() {
-    // MatterEngine.clear(this.physicsEngine);
-  }
-
-  enablePhysicsForObject(eo: EngineObject) {
-    if (!this.objects.has(eo)) {
-      throw new Error("Attempted to enable physics for an unknown EO");
-    }
-    eo.physicsBox = MatterBodies.rectangle(eo.x, eo.y, eo.width, eo.height);
-    // Prevent rotation: https://github.com/liabru/matter-js/issues/104
-    // eo.physicsBox.inertia = Infinity;
-    // eo.physicsBox.frictionAir = 0.5;
-    MatterComposite.add(this.physicsEngine.world, eo.physicsBox);
-  }
-
-  commitPhysics() {
-    this.objects.forEach((eo) => {
-      if (!eo.physicsBox) {
-        // TODO: when not using physics, make sure there's no box, so dynamically
-        // toggling this doesn't put our object soemwhere we don't expect afterwards
-        return;
-      }
-      eo.x = eo.physicsBox.position.x;
-      eo.y = eo.physicsBox.position.y;
-    });
-  }
-
-  render(
-    ctx: CanvasRenderingContext2D,
-    renderWidth: number,
-    renderHeight: number
-  ) {
-    ctx.clearRect(0, 0, renderWidth, renderHeight);
-    this.objects.forEach((eo) => {
-      if (this._debug_spriteBoxes && eo.physicsBox) {
-        ctx.fillStyle = "blue";
-        const { x, y } = eo.physicsBox.position;
-        ctx.fillRect(x, y, eo.width, eo.height);
-      }
-      if (this._debug_spriteBoxes && eo instanceof Sprite) {
-        ctx.fillStyle = "red";
-        ctx.fillRect(eo.x, eo.y, eo.width, eo.height);
-      }
-      eo.paintToContext(ctx);
-    });
-  }
-
-  __getSerialRepresentation() {
-    return {
-      objects: [...this.objects],
-    };
   }
 }

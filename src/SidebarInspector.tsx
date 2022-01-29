@@ -1,5 +1,6 @@
 import React, { useCallback, useMemo, useState } from "react";
-import { Tiles, EngineState, Sprite } from "./Engine";
+import { Tiles, Sprite } from "./Engine";
+import { EngineState } from "./EngineState";
 import {
   SelectionState,
   selectionState,

@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef } from "react";
-import { EngineState, EOProxyForScripting, EngineObject } from "./Engine";
+import { EOProxyForScripting, EngineObject } from "./Engine";
+import { EngineState, Engine } from "./EngineState";
 import { degVectorFromAToB, rectCenter, rectOverlap } from "./Rect";
 import { useGlobalPressedKeySet } from "./useAppKeyboardEvents";
 import { Engine as MatterEngine } from "matter-js";
@@ -46,83 +47,10 @@ export type EngineMouseEvent = {
   nativeEvent: MouseEvent;
 };
 
-function initializeRun(
-  engineState: EngineState,
-  canvas: HTMLCanvasElement,
-  pressedKeySet: Set<string>
-) {
-  const frame = {
-    width: canvas.width,
-    height: canvas.height,
-  };
-
-  const objects = {
-    find(id: string): null | EOProxyForScripting {
-      // TODO: editor-side check for non-duplicate ids
-      for (const obj of engineState.objects.values()) {
-        if (obj.id === id) {
-          return obj._proxyForScripting;
-        }
-      }
-      return null;
-    },
-
-    // todo: split up to "isColliding" and "directionToObject"
-    // todo: add this.isColliding(b) to ProxyForScripting
-    areColliding(a: EOProxyForScripting, b: EOProxyForScripting): boolean {
-      const ar = a.getRect();
-      const br = b.getRect();
-      return rectOverlap(ar, br);
-    },
-
-    // returns the angle at which two elements are colliding
-    // or null if they're not
-    findCollisionAngle(
-      a: EOProxyForScripting,
-      b: EOProxyForScripting
-    ): number | null {
-      const ar = a.getRect();
-      const br = b.getRect();
-      if (!rectOverlap(ar, br)) {
-        return null;
-      }
-
-      const ac = rectCenter(ar);
-      const bc = rectCenter(br);
-
-      const [_, angle] = degVectorFromAToB(ac, bc);
-      return angle;
-    },
-  };
-
-  const keyboard = {
-    isPressed(...keys: string[]): boolean {
-      for (const key of keys) {
-        if (!pressedKeySet.has(key)) {
-          return false;
-        }
-      }
-      return true;
-    },
-  };
-
-  for (const eo of engineState.objects) {
-    eo._proxyForScripting = new EOProxyForScripting(eo);
-    const script = new Function(
-      "console",
-      "frame",
-      "objects",
-      "keyboard",
-      eo._script
-    );
-    script.call(eo._proxyForScripting, console, frame, objects, keyboard);
-    console.log("initialized", eo);
-  }
-}
-
 export function EngineComponent({
   state: engineState,
   onClick,
+  onDoubleClick,
   onMouseDown,
   onMouseUp,
   onMouseMove,
@@ -131,6 +59,7 @@ export function EngineComponent({
 }: {
   state: EngineState;
   onClick?: (evt: EngineMouseEvent) => void;
+  onDoubleClick?: (evt: EngineMouseEvent) => void;
   onMouseDown?: (evt: EngineMouseEvent) => void;
   onMouseUp?: (evt: EngineMouseEvent) => void;
   onMouseMove?: (evt: { x: number; y: number }) => void;
@@ -146,8 +75,7 @@ export function EngineComponent({
     }
     // On RUN
     else {
-      engineState.resetPhysics();
-      initializeRun(engineState, canvasRef.current, pressedKeySet);
+      Engine.initializeRun(engineState, canvasRef.current, pressedKeySet);
     }
   }, [engineState, mode, pressedKeySet]);
 
@@ -163,16 +91,15 @@ export function EngineComponent({
     let lastTime = -1;
     let raf = requestAnimationFrame(function gameLoop(time) {
       if (mode === "running") {
-        dispatchFrameEventToAll(engineState);
-      }
-
-      if (mode === "running") {
+        // Scripting
+        Engine.dispatchFrameEventToAll(engineState);
+        // Physics
         const deltaTime = lastTime > 0 ? time - lastTime : 1000 / 60;
         MatterEngine.update(engineState.physicsEngine, deltaTime);
-        engineState.commitPhysics();
+        Engine.commitPhysics(engineState);
       }
 
-      engineState.render(ctx, canvas.width, canvas.height);
+      Engine.render(engineState, ctx, canvas.width, canvas.height);
       raf = requestAnimationFrame(gameLoop);
       lastTime = time;
     });
@@ -191,7 +118,7 @@ export function EngineComponent({
       if (mode === "running") {
         const [x, y] = getEventCanvasCoordinates(canvas, e);
         const clickedSprite = getObjectAtCoords(engineState, [x, y]);
-        clickedSprite && dispatchClickEvent(engineState, clickedSprite);
+        clickedSprite && Engine.dispatchClickEvent(engineState, clickedSprite);
         return;
       }
 
@@ -205,6 +132,25 @@ export function EngineComponent({
     },
     [engineState, mode, onClick]
   );
+
+  const onEngineDoubleClick = useCallback((e: React.MouseEvent) => {
+    const canvas = canvasRef.current;
+    if (!canvas) {
+      return;
+    }
+
+    if (mode === "running") {
+      return;
+    }
+
+    if (!onDoubleClick) {
+      return;
+    }
+
+    const [x, y] = getEventCanvasCoordinates(canvas, e);
+    const clickedSprite = getObjectAtCoords(engineState, [x, y]);
+    onDoubleClick({ x, y, sprite: clickedSprite, nativeEvent: e.nativeEvent });
+  }, []);
 
   const onEngineMouseDown = useCallback(
     (e: React.MouseEvent) => {
@@ -278,19 +224,9 @@ export function EngineComponent({
       }}
       ref={canvasRef}
       onClick={onEngineClick}
+      onDoubleClick={onEngineDoubleClick}
       onMouseDown={onEngineMouseDown}
       onMouseUp={onEngineMouseUp}
     ></canvas>
   );
-}
-
-export function dispatchClickEvent(engineState: EngineState, eo: EngineObject) {
-  console.log("TODO: run click events");
-  eo._proxyForScripting.triggerClick();
-}
-
-function dispatchFrameEventToAll(engineState: EngineState) {
-  for (const eo of engineState.objects) {
-    eo._proxyForScripting.triggerFrame();
-  }
 }

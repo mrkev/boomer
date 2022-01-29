@@ -16,7 +16,8 @@
     "isolatedModules": true,
     "noEmit": true,
     "jsx": "react-jsx",
-    "noImplicitOverride": true
+    "noImplicitOverride": true,
+    "experimentalDecorators": true
   },
   "include": ["./src", "jest.config.js"]
 }
