@@ -2,7 +2,7 @@ import { EngineObject } from "./Engine";
 import { atom } from "jotai";
 import { LinkedState, useLinkedState } from "./lib/LinkedState";
 import { useCallback } from "react";
-import OrderedSet from "./OrderedSet";
+import OrderedSet from "./lib/OrderedSet";
 
 type DraftTransform = {
   eo: EngineObject;
