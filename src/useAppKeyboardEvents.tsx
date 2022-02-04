@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { Sprite, Tiles } from "./Engine";
+import { Camera, Sprite, Tiles } from "./Engine";
 import { EngineState } from "./EngineState";
 import { useAtom } from "jotai";
 import { modeState, selectionState } from "./AppState";
@@ -77,7 +77,8 @@ export function useGlobalPressedKeySet() {
 
 export function useAppKeyboardEvents(
   engineState: EngineState,
-  tiles: Tiles | null
+  tiles: Tiles | null,
+  editorCamera: Camera
 ) {
   const [selection, setSelection] = useLinkedState(selectionState);
   const [mode] = useAtom(modeState);
@@ -121,12 +122,13 @@ export function useAppKeyboardEvents(
           break;
         }
 
-        case "Escape": {
-          // if (cursor)
-          break;
-        }
-
         case "ArrowDown": {
+          if (selection.state === "idle") {
+            // move camera
+            editorCamera.y -= 1;
+            break;
+          }
+
           if (selection.state !== "engine-object") {
             break;
           }
@@ -139,6 +141,12 @@ export function useAppKeyboardEvents(
         }
 
         case "ArrowUp": {
+          if (selection.state === "idle") {
+            // move camera
+            editorCamera.y += 1;
+            break;
+          }
+
           if (selection.state !== "engine-object") {
             break;
           }
@@ -149,6 +157,12 @@ export function useAppKeyboardEvents(
         }
 
         case "ArrowLeft": {
+          if (selection.state === "idle") {
+            // move camera
+            editorCamera.x += 1;
+            break;
+          }
+
           if (selection.state !== "engine-object") {
             break;
           }
@@ -161,12 +175,30 @@ export function useAppKeyboardEvents(
         }
 
         case "ArrowRight": {
+          if (selection.state === "idle") {
+            // move camera
+            editorCamera.x -= 1;
+            break;
+          }
+
           if (selection.state !== "engine-object") {
             break;
           }
           for (const eo of selection.eos) {
             eo.x += 1;
           }
+          break;
+        }
+
+        case " ": {
+          if (selection.state === "idle") {
+            // move camera
+            editorCamera.x = 0;
+            editorCamera.y = 0;
+            console.log(editorCamera);
+            break;
+          }
+
           break;
         }
 

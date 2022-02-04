@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 
 import "./App.css";
-import { Tiles, EngineObject, Text, Box } from "./Engine";
+import { Tiles, EngineObject, Text, Box, Camera } from "./Engine";
 import { EngineState } from "./EngineState";
 import { EngineComponent, EngineMouseEvent } from "./EngineComponent";
 import { useAtom } from "jotai";
@@ -20,17 +20,30 @@ import { Button, ButtonGroup, Divider } from "@blueprintjs/core";
 import { useLinkedState } from "./lib/LinkedState";
 import { SidebarInspector } from "./SidebarInspector";
 
-const CANVAS_SIZE: [number, number] = [300, 150];
+const CANVAS_SIZE: [number, number] = [300, 200];
+const CAMERA_SIZE: [number, number] = [300, 200];
 
 export default function App() {
   const [selection, setEOSelection] = useAppSelectionState();
   const [tiles, setTiles] = useState<Tiles | null>(null);
-  const [engineState, setEngineState] = useState(new EngineState());
+  const [engineState, setEngineState] = useState(
+    new EngineState(new Camera(0, 0, CAMERA_SIZE[0], CAMERA_SIZE[1]))
+  );
+  const [editorCamera] = useState(
+    new Camera(0, 0, CAMERA_SIZE[0], CAMERA_SIZE[1])
+  );
   const [mode, setMode] = useAtom(modeState);
   const [cursor, setCursor] = useLinkedState(cursorState);
 
+  useEffect(() => {
+    (window as any).boomer = {
+      engineState,
+      editorCamera,
+    };
+  }, [engineState, editorCamera]);
+
   useAppMouseCursor(engineState, CANVAS_SIZE);
-  useAppKeyboardEvents(engineState, tiles);
+  useAppKeyboardEvents(engineState, tiles, editorCamera);
 
   useEffect(() => {
     async function loadTiles() {
@@ -46,7 +59,6 @@ export default function App() {
     x,
     y,
   }: EngineMouseEvent) {
-    setEOSelection(sprite === null ? [] : [sprite]);
     const cursorState = cursor.state;
 
     switch (cursorState) {
@@ -57,13 +69,11 @@ export default function App() {
         break;
 
       case "placing-text":
-        // TODO: place text
         const text = new Text(x, y, "hello world");
         engineState.addEngineObject(text);
         setCursor({ state: "idle" });
         return;
       case "placing-box":
-        // TODO: place text
         const box = new Box({
           x,
           y,
@@ -74,16 +84,26 @@ export default function App() {
         engineState.enablePhysicsForObject(box);
         setCursor({ state: "idle" });
         return;
+      case "will-pan":
+        setCursor({
+          state: "moving",
+          clientStart: [ne.clientX, ne.clientY],
+          transformedEngineObjects: [
+            { eo: editorCamera, start: [editorCamera.x, editorCamera.y] },
+          ],
+        });
+        return;
 
       default:
         exhaustiveSwitch(cursorState);
     }
 
     if (sprite) {
+      setEOSelection(sprite === null ? [] : [sprite]);
       setCursor({
         state: "moving",
         clientStart: [ne.clientX, ne.clientY],
-        engineObjectTransforms: [{ eo: sprite, start: [sprite.x, sprite.y] }],
+        transformedEngineObjects: [{ eo: sprite, start: [sprite.x, sprite.y] }],
       });
     } else {
       setCursor({
@@ -173,6 +193,17 @@ export default function App() {
               }
             }}
           />
+          <Divider />
+          <Button
+            small
+            active={cursor.state === "will-pan"}
+            icon="hand"
+            onClick={() => {
+              if (cursor.state !== "will-pan") {
+                setCursor({ state: "will-pan" });
+              }
+            }}
+          />
           <Button
             small
             active={cursor.state === "placing-text"}
@@ -217,7 +248,7 @@ export default function App() {
           display: "flex",
           flexDirection: "row",
           flexGrow: 1,
-          alignItems: "flex-start",
+          alignItems: "stretch",
         }}
       >
         {/* <SplitPane
@@ -235,23 +266,30 @@ export default function App() {
           style={{
             position: "relative",
             border:
-              mode.state === "running" ? "3px red solid" : "1px solid grey",
-            marginLeft: 10,
+              mode.state === "running" ? "3px red solid" : "0px solid grey",
+            // marginLeft: 10,
             overflow: "hidden",
+            flexGrow: 1,
           }}
         >
           <EngineComponent
             size={CANVAS_SIZE}
             state={engineState}
+            editorCamera={editorCamera}
             // todo: rename sprite to object
             onMouseDown={engineMouseDown}
             onDoubleClick={engineDoubleClick}
             mode={mode.state}
           />
           {selection.state === "engine-object" && mode.state === "editing" && (
-            <TransformBox engineObjects={selection.eos} />
+            <TransformBox
+              engineObjects={selection.eos}
+              editorCamera={editorCamera}
+            />
           )}
-          {cursor.state === "selecting" && <SelectionBox />}
+          {cursor.state === "selecting" && (
+            <SelectionBox editorCamera={editorCamera} />
+          )}
         </div>
 
         <SidebarInspector engineState={engineState} tiles={tiles} />
@@ -263,7 +301,7 @@ export default function App() {
   );
 }
 
-function SelectionBox() {
+function SelectionBox({ editorCamera }: { editorCamera: Camera }) {
   const [cursor] = useLinkedState(cursorState);
 
   if (cursor.state !== "selecting") {
@@ -286,8 +324,8 @@ function SelectionBox() {
         border: "1px solid white",
         width: width * devicePixelRatio,
         height: height * devicePixelRatio,
-        top: top * devicePixelRatio,
-        left: left * devicePixelRatio,
+        top: (top + editorCamera.y) * devicePixelRatio,
+        left: (left + editorCamera.x) * devicePixelRatio,
         boxSizing: "border-box",
         background: "rgba(99, 99, 255, 0.5)",
       }}
@@ -299,8 +337,10 @@ type TransformHandle = "tr" | "tl" | "br" | "bl";
 
 function TransformBox({
   engineObjects: eos,
+  editorCamera,
 }: {
   engineObjects: Array<EngineObject>;
+  editorCamera: Camera;
 }) {
   const [cursor, setCursor] = useLinkedState(cursorState);
   // const eosRects = eos.map((eo) => [eo.x, eo.y, eo.width, eo.height] as Rect);
@@ -319,7 +359,9 @@ function TransformBox({
           return null;
         }
 
-        const [x, y, width, height] = minRect;
+        const [xo, yo, width, height] = minRect;
+        const x = xo + editorCamera.x;
+        const y = yo + editorCamera.y;
 
         const div = divRef.current;
         if (div) {
@@ -362,7 +404,7 @@ function TransformBox({
         setCursor({
           state: "moving",
           clientStart: [e.clientX, e.clientY],
-          engineObjectTransforms: eos.map((eo) => ({
+          transformedEngineObjects: eos.map((eo) => ({
             eo,
             start: [eo.x, eo.y],
           })),

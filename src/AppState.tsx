@@ -15,7 +15,7 @@ type CursorState =
   | {
       state: "moving";
       clientStart: [number, number];
-      engineObjectTransforms: Array<DraftTransform>;
+      transformedEngineObjects: Array<DraftTransform>;
     }
   | {
       state: "selecting";
@@ -28,6 +28,9 @@ type CursorState =
     }
   | {
       state: "placing-box";
+    }
+  | {
+      state: "will-pan";
     };
 
 export const cursorState = LinkedState.of<CursorState>({

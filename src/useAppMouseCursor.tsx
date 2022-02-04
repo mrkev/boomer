@@ -10,6 +10,7 @@ import {
 } from "./AppState";
 import { rectSubset } from "./Rect";
 import { useLinkedState } from "./lib/LinkedState";
+import { Camera } from "./Engine";
 
 export function useAppMouseCursor(
   engineState: EngineState,
@@ -34,6 +35,9 @@ export function useAppMouseCursor(
       case "placing-box":
         window.document.body.style.cursor = "crosshair";
         break;
+      case "will-pan":
+        window.document.body.style.cursor = "grab";
+        break;
       default:
         exhaustiveSwitch(cursor);
     }
@@ -56,7 +60,8 @@ export function useAppMouseCursor(
           console.log("TRANSFORMING");
           break;
         case "moving": {
-          const { clientStart, engineObjectTransforms: engineObjects } = cursor;
+          const { clientStart, transformedEngineObjects: engineObjects } =
+            cursor;
           const delta = vdiv(
             vsub([e.clientX, e.clientY], clientStart),
             devicePixelRatio
@@ -67,6 +72,7 @@ export function useAppMouseCursor(
             eo._proxyForScripting.x = x;
             eo._proxyForScripting.y = y;
           }
+
           break;
         }
         case "selecting": {
@@ -90,6 +96,10 @@ export function useAppMouseCursor(
         case "placing-box":
           // TODO: box size
           break;
+
+        case "will-pan":
+          // TODO: pan
+          break;
         default:
           exhaustiveSwitch(cursor);
       }
@@ -107,6 +117,13 @@ export function useAppMouseCursor(
           break;
         case "moving":
           // console.log("FINISHED MOVE");
+          if (
+            cursor.transformedEngineObjects.length === 1 &&
+            cursor.transformedEngineObjects[0].eo instanceof Camera
+          ) {
+            setCursor({ state: "will-pan" });
+            return;
+          }
           setCursor({ state: "idle" });
           break;
         case "selecting":
@@ -137,6 +154,9 @@ export function useAppMouseCursor(
         case "placing-box":
           // handled on canvas mouseUp listener
           break;
+        case "will-pan":
+          // todo pan
+          break;
         default:
           exhaustiveSwitch(cursor);
       }
@@ -151,6 +171,7 @@ export function useAppMouseCursor(
         case "selecting":
         case "placing-text":
         case "placing-box":
+        case "will-pan":
           setCursor({ state: "idle" });
           break;
         default:

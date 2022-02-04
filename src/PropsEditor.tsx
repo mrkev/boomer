@@ -2,19 +2,15 @@ import React, { RefObject, useEffect, useRef, useState } from "react";
 import Editor, { BeforeMount, OnChange, OnMount } from "@monaco-editor/react";
 import { EngineObject } from "./Engine";
 import { editor } from "monaco-editor";
-import {
-  openObjectsState,
-  selectionState,
-  useAppSelectionState,
-} from "./AppState";
+import { openObjectsState, useAppSelectionState } from "./AppState";
 import { NonIdealState, Tab, TabId, Tabs } from "@blueprintjs/core";
 import { useLinkedState } from "./lib/LinkedState";
 
 export const PropsEditor = React.memo(function PropsEditor() {
-  const [selection, setEOSelection] = useAppSelectionState();
+  const [selection] = useAppSelectionState();
   const [openObjects] = useLinkedState(openObjectsState);
   const elRefs = useRef<Record<string, RefObject<HTMLInputElement>>>({});
-  const [selectedTab, setSelectedTab] = useState<TabId>("layers");
+  const [_selectedTab, setSelectedTab] = useState<TabId>("layers");
 
   // const t2Ref = useRef<HTMLTableSectionElement | null>(null);
   const [_, update] = useState({});
@@ -31,20 +27,23 @@ export const PropsEditor = React.memo(function PropsEditor() {
   //   }
   // }
 
-  console.log("RETURNING HERe", selection);
   if (selection.state !== "engine-object") {
     return (
-      <NonIdealState
-        icon="select"
-        title="Nothing selected"
-        description="Select something to inspect"
-      />
+      <div style={{ height: 300, flexGrow: 0 }}>
+        <NonIdealState
+          icon="select"
+          title="Nothing selected"
+          description="Select something to inspect"
+        />
+      </div>
     );
   }
 
   if (selection.eos.length !== 1) {
     return (
-      <NonIdealState icon="multi-select" title="Multiple objects selected" />
+      <div style={{ height: 300, flexGrow: 0 }}>
+        <NonIdealState icon="multi-select" title="Multiple objects selected" />
+      </div>
     );
   }
 
@@ -142,8 +141,8 @@ export const PropsEditor = React.memo(function PropsEditor() {
         // background: "red",
         display: "flex",
         flexDirection: "row",
-        width: "100%",
-        height: "40vh",
+        height: 300,
+        flexGrow: 0,
       }}
     >
       <div style={{ flexGrow: 1, display: "flex", flexDirection: "column" }}>

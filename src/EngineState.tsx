@@ -13,6 +13,7 @@ import {
   EngineObject,
   Sprite,
   EOProxyForScripting,
+  Camera,
 } from "./Engine";
 import { degVectorFromAToB, rectCenter, rectOverlap } from "./Rect";
 import { assert } from "./assert";
@@ -58,7 +59,7 @@ function getScriptingEnvironmentObjectsNamespace(engineState: EngineState) {
   };
 }
 
-export abstract class Engine {
+export class Engine {
   // Triggers frame events on an engine state's objects' scripts
   static dispatchFrameEventToAll(engineState: EngineState) {
     for (const eo of engineState.objects) {
@@ -87,13 +88,18 @@ export abstract class Engine {
   }
 
   // renders an engine state to a context
-  static render(
+  static renderCamera(
     engineState: EngineState,
-    ctx: CanvasRenderingContext2D,
-    renderWidth: number,
-    renderHeight: number
+    camera: Camera,
+    ctx: CanvasRenderingContext2D
   ) {
-    ctx.clearRect(0, 0, renderWidth, renderHeight);
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.fillStyle = "#292A2D";
+    ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+
+    // console.log(1, 0, 0, 1, camera.x, camera.y);
+    ctx.setTransform(1, 0, 0, 1, camera.x, camera.y);
+
     engineState.objects.forEach((eo) => {
       if (engineState._debug_spriteBoxes && eo._physicsBox) {
         ctx.fillStyle = "blue";
@@ -106,6 +112,16 @@ export abstract class Engine {
       }
       eo.paintToContext(ctx);
     });
+
+    // Renders engine state's camera as a box. Visible only
+    // if using a de-attatched camera.
+    ctx.strokeStyle = "green";
+    ctx.strokeRect(
+      engineState.camera.x,
+      engineState.camera.y,
+      engineState.camera.width,
+      engineState.camera.height
+    );
   }
 
   // Initializes an engine state to be run
@@ -162,22 +178,25 @@ export class EngineState implements Serializable {
     gravity: { x: 0, y: 0 },
   });
   readonly objects = new OrderedSet<EngineObject>();
-  readonly _eoindexUUID = new Map<string, EngineObject>();
+  readonly camera: Camera;
+
+  readonly _index_UUID_eo = new Map<string, EngineObject>();
 
   readonly _debug_spriteBoxes = true;
 
-  constructor() {
+  constructor(camera: Camera) {
+    this.camera = camera;
     (window as any).es = this;
   }
 
   addEngineObject(eo: EngineObject) {
     this.objects.add(eo);
-    this._eoindexUUID.set(eo._uuid, eo);
+    this._index_UUID_eo.set(eo._uuid, eo);
   }
 
   removeEngineObject(eo: EngineObject) {
     this.objects.delete(eo);
-    this._eoindexUUID.delete(eo._uuid);
+    this._index_UUID_eo.delete(eo._uuid);
   }
 
   enablePhysicsForObject(eo: EngineObject) {
@@ -194,6 +213,7 @@ export class EngineState implements Serializable {
   __getSerialRepresentation() {
     return {
       objects: [...this.objects],
+      camera: this.camera,
     };
   }
 }

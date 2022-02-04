@@ -1,5 +1,5 @@
 import { assert } from "./assert";
-import { EngineObject, Sprite, Tiles } from "./Engine";
+import { Camera, EngineObject, Sprite, Tiles } from "./Engine";
 import { EngineState } from "./EngineState";
 
 export const doSave = (engineState: EngineState, tiles: Tiles) => {
@@ -97,8 +97,14 @@ export const hydrateFor = {
     return tiles;
   },
 
+  Camera: async (value: any): Promise<Camera> => {
+    const { x, y, w, h } = value;
+    return new Camera(x, y, w, h);
+  },
+
   EngineState: async (value: any, tiles: Tiles): Promise<EngineState> => {
-    const engineState = new EngineState();
+    const camera = await hydrateFor.Camera(value.camera);
+    const engineState = new EngineState(camera);
     // TODO: hydrate tile maps first
     for (const obj of value.objects) {
       if (obj == null) {
@@ -120,8 +126,18 @@ export const hydrateFor = {
   },
 
   Sprite: async (value: any, tiles: Tiles): Promise<Sprite> => {
-    const { $type, x, y, width, height, id, imageUrl, _script, ...missing } =
-      value;
+    const {
+      $type,
+      x,
+      y,
+      width,
+      height,
+      id,
+      imageUrl,
+      _script,
+      _uuid,
+      ...missing
+    } = value;
     assert(
       $type === "Sprite",
       `attempting to hydrate non-sprite as Sprite. Type is ${$type}`
@@ -146,6 +162,7 @@ export const hydrateFor = {
     sprite.height = height;
     sprite._script = _script;
     sprite.id = id;
+    sprite._uuid = _uuid;
 
     if (Object.keys(missing).length) {
       console.warn("Sprite: Didn't hydrate", missing);

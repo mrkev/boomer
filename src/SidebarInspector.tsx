@@ -90,7 +90,7 @@ export function SidebarInspector({
   }, [engineState, tiles]);
 
   return (
-    <div style={{ flexGrow: 1, padding: "0px 8px" }}>
+    <div style={{ flexGrow: 1, padding: "0px 8px", minWidth: 200 }}>
       <Tabs
         id="LayersAndTiles"
         selectedTabId={selectedTab}

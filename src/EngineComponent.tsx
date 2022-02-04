@@ -1,9 +1,15 @@
-import React, { useCallback, useEffect, useRef } from "react";
-import { EOProxyForScripting, EngineObject } from "./Engine";
+import React, {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
+import { EOProxyForScripting, EngineObject, Camera } from "./Engine";
 import { EngineState, Engine } from "./EngineState";
-import { degVectorFromAToB, rectCenter, rectOverlap } from "./Rect";
 import { useGlobalPressedKeySet } from "./useAppKeyboardEvents";
 import { Engine as MatterEngine } from "matter-js";
+import { createLogger } from "vite";
 
 /** Pixel-perfect and scaled coordinates of mouse/pointer events */
 function getEventCanvasCoordinates(
@@ -11,8 +17,19 @@ function getEventCanvasCoordinates(
   e: PointerEvent | MouseEvent | React.PointerEvent | React.MouseEvent
 ) {
   const rect = canvas.getBoundingClientRect();
-  const x = Math.round((e.clientX - rect.left) / devicePixelRatio);
-  const y = Math.round((e.clientY - rect.top) / devicePixelRatio);
+  const ctx = canvas.getContext("2d");
+  if (!ctx) {
+    throw new Error("Lost context");
+  }
+
+  // a c e
+  // b d f
+  // 0 0 1
+  const transform = ctx.getTransform();
+
+  const x =
+    Math.round((e.clientX - rect.left) / devicePixelRatio) - transform.e;
+  const y = Math.round((e.clientY - rect.top) / devicePixelRatio) - transform.f;
   return [x, y];
 }
 
@@ -32,7 +49,6 @@ function getObjectAtCoords(
       obj.y <= y &&
       y <= obj.y + obj.height
     ) {
-      console.log("clicked", obj);
       clickedSprite = obj;
       break;
     }
@@ -49,6 +65,7 @@ export type EngineMouseEvent = {
 
 export function EngineComponent({
   state: engineState,
+  editorCamera,
   onClick,
   onDoubleClick,
   onMouseDown,
@@ -58,11 +75,12 @@ export function EngineComponent({
   size,
 }: {
   state: EngineState;
-  onClick?: (evt: EngineMouseEvent) => void;
-  onDoubleClick?: (evt: EngineMouseEvent) => void;
-  onMouseDown?: (evt: EngineMouseEvent) => void;
-  onMouseUp?: (evt: EngineMouseEvent) => void;
-  onMouseMove?: (evt: { x: number; y: number }) => void;
+  editorCamera?: Camera;
+  onClick?: (_evt: EngineMouseEvent) => void;
+  onDoubleClick?: (_evt: EngineMouseEvent) => void;
+  onMouseDown?: (_evt: EngineMouseEvent) => void;
+  onMouseUp?: (_evt: EngineMouseEvent) => void;
+  onMouseMove?: (_evt: { x: number; y: number }) => void;
   mode: "editing" | "running";
   size: [number, number];
 }) {
@@ -99,14 +117,40 @@ export function EngineComponent({
         Engine.commitPhysics(engineState);
       }
 
-      Engine.render(engineState, ctx, canvas.width, canvas.height);
+      Engine.renderCamera(
+        engineState,
+        mode === "running"
+          ? engineState.camera
+          : editorCamera || engineState.camera,
+        ctx
+      );
       raf = requestAnimationFrame(gameLoop);
       lastTime = time;
     });
     return () => {
       cancelAnimationFrame(raf);
     };
-  }, [engineState, mode]);
+  }, [editorCamera, engineState, mode]);
+
+  const [canvasSize, setCanvasSize] = useState<[number, number]>(size);
+  useLayoutEffect(() => {
+    const canvasEl = canvasRef.current;
+    if (!canvasEl) {
+      return;
+    }
+
+    const resizeObserver = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      setCanvasSize([entry.contentRect.width, entry.contentRect.height]);
+    });
+
+    resizeObserver.observe(canvasEl);
+
+    return () => {
+      resizeObserver.unobserve(canvasEl);
+    };
+  }, []);
+  // console.log("SIZE", canvasSize);
 
   const onEngineClick = useCallback(
     (e: React.MouseEvent) => {
@@ -133,24 +177,32 @@ export function EngineComponent({
     [engineState, mode, onClick]
   );
 
-  const onEngineDoubleClick = useCallback((e: React.MouseEvent) => {
-    const canvas = canvasRef.current;
-    if (!canvas) {
-      return;
-    }
+  const onEngineDoubleClick = useCallback(
+    (e: React.MouseEvent) => {
+      const canvas = canvasRef.current;
+      if (!canvas) {
+        return;
+      }
 
-    if (mode === "running") {
-      return;
-    }
+      if (mode === "running") {
+        return;
+      }
 
-    if (!onDoubleClick) {
-      return;
-    }
+      if (!onDoubleClick) {
+        return;
+      }
 
-    const [x, y] = getEventCanvasCoordinates(canvas, e);
-    const clickedSprite = getObjectAtCoords(engineState, [x, y]);
-    onDoubleClick({ x, y, sprite: clickedSprite, nativeEvent: e.nativeEvent });
-  }, []);
+      const [x, y] = getEventCanvasCoordinates(canvas, e);
+      const clickedSprite = getObjectAtCoords(engineState, [x, y]);
+      onDoubleClick({
+        x,
+        y,
+        sprite: clickedSprite,
+        nativeEvent: e.nativeEvent,
+      });
+    },
+    [engineState, mode, onDoubleClick]
+  );
 
   const onEngineMouseDown = useCallback(
     (e: React.MouseEvent) => {
@@ -171,7 +223,7 @@ export function EngineComponent({
       const clickedSprite = getObjectAtCoords(engineState, [x, y]);
       onMouseDown({ x, y, sprite: clickedSprite, nativeEvent: e.nativeEvent });
     },
-    [engineState, onMouseDown]
+    [engineState, mode, onMouseDown]
   );
 
   const onEngineMouseUp = useCallback(
@@ -193,7 +245,7 @@ export function EngineComponent({
       const clickedSprite = getObjectAtCoords(engineState, [x, y]);
       onMouseUp({ x, y, sprite: clickedSprite, nativeEvent: e.nativeEvent });
     },
-    [engineState, onMouseUp]
+    [engineState, mode, onMouseUp]
   );
 
   useEffect(() => {
@@ -214,13 +266,35 @@ export function EngineComponent({
     };
   }, [onMouseMove]);
 
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas || !editorCamera) {
+      return;
+    }
+
+    const onWheel = (e: WheelEvent) => {
+      if (mode === "running") {
+        return;
+      }
+
+      editorCamera.x -= e.deltaX / 2;
+      editorCamera.y -= e.deltaY / 2;
+    };
+    window.addEventListener("wheel", onWheel);
+    return () => {
+      window.removeEventListener("wheel", onWheel);
+    };
+  });
+
+  const [width, height] = canvasSize;
+
   return (
     <canvas
-      width={size[0]}
-      height={size[1]}
+      width={width / 2}
+      height={height / 2}
       style={{
-        width: "600px",
-        height: "300px",
+        width: "100%",
+        height: "100%",
       }}
       ref={canvasRef}
       onClick={onEngineClick}
