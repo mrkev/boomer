@@ -2,6 +2,7 @@ import { Body as MatterBody } from "matter-js";
 import { Rect } from "../Rect";
 import { shortUUID } from "../lib/uuid";
 import { EOProxyForScripting } from "./Engine";
+import { BoomerProp, number, stringOpt, stringRO } from "./BoomerProp";
 
 export abstract class EngineObject {
   abstract classname: string;
@@ -12,6 +13,32 @@ export abstract class EngineObject {
   y: number;
   width: number;
   height: number;
+
+  abstract readonly visibleProps: BoomerProp<any>[];
+
+  protected _eovps<T extends EngineObject>(): BoomerProp<T>[] {
+    return [
+      stringRO<EngineObject>(this, "classname"),
+      stringOpt<EngineObject>(this, "id"),
+      number<EngineObject>(this, "x"),
+      number<EngineObject>(this, "y"),
+      number<EngineObject>(this, "width"),
+      number<EngineObject>(this, "height"),
+    ];
+  }
+
+  protected _props<T extends EngineObject>(
+    v: BoomerProp<T>[]
+  ): BoomerProp<T>[] {
+    return [
+      stringRO<EngineObject>(this, "classname") as BoomerProp<T>,
+      stringOpt<EngineObject>(this, "id") as BoomerProp<T>,
+      number<EngineObject>(this, "x") as BoomerProp<T>,
+      number<EngineObject>(this, "y") as BoomerProp<T>,
+      number<EngineObject>(this, "width") as BoomerProp<T>,
+      number<EngineObject>(this, "height") as BoomerProp<T>,
+    ].concat(v);
+  }
 
   constructor(
     x: number,

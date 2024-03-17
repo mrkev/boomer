@@ -3,69 +3,7 @@ import Matter from "matter-js";
 import { exhaustiveSwitch } from "../AppState";
 import { EngineObject } from "./EngineObject";
 import { Sprite } from "./Sprite";
-
-export class Tiles {
-  readonly url: string;
-  readonly img: HTMLImageElement;
-  readonly spriteSize: number;
-  readonly length: number;
-
-  constructor(url: string, img: HTMLImageElement, spriteSize: number) {
-    this.url = url;
-    this.img = img;
-    this.spriteSize = spriteSize;
-    this.length = (img.width / spriteSize) * (img.height / spriteSize);
-  }
-
-  static async from({
-    url,
-    spriteSize,
-  }: {
-    url: string;
-    spriteSize: number;
-  }): Promise<Tiles> {
-    return new Promise((res) => {
-      const img = document.createElement("img");
-      img.onload = function () {
-        res(new Tiles(url, img, spriteSize));
-      };
-      // triggers onload event (after it loads of course)
-      // img.src = "//via.placeholder.com/350x150";
-      img.src = url;
-    });
-  }
-
-  __getSerialRepresentation() {
-    return {
-      url: this.url,
-      spriteSize: this.spriteSize,
-    };
-  }
-
-  drawSprite(
-    num: number,
-    [x, y]: [number, number],
-    ctx: CanvasRenderingContext2D
-  ) {
-    // const cols = this.img.width / this.spriteSize;
-    const srcX = (num * this.spriteSize) % this.img.width;
-    // const rows = this.img.height / this.spriteSize;
-    const srcY =
-      Math.floor((num * this.spriteSize) / this.img.width) * this.spriteSize;
-
-    ctx.drawImage(
-      this.img,
-      srcX,
-      srcY,
-      this.spriteSize,
-      this.spriteSize,
-      x,
-      y,
-      this.spriteSize,
-      this.spriteSize
-    );
-  }
-}
+import { Box } from "./Box";
 
 // TODO: rename __getSerialRepresentation() to __getSerializableRepresentation
 
@@ -265,62 +203,6 @@ export class EOProxyForScripting {
   }
 }
 
-export class Box extends EngineObject implements Serializable {
-  readonly classname = "Box";
-  color: string;
-
-  constructor({
-    x = 0,
-    y = 0,
-    width,
-    height,
-    color = "green",
-  }: {
-    x?: number;
-    y?: number;
-    width: number;
-    height: number;
-    color?: string;
-  }) {
-    super(x, y, width, height, null);
-    this.color = color;
-  }
-
-  paintToContext(ctx: CanvasRenderingContext2D) {
-    ctx.fillStyle = this.color;
-    ctx.fillRect(this.x, this.y, this.width, this.height);
-  }
-
-  __getSerialRepresentation() {
-    return this.__getEOSerializableRepresentation();
-  }
-}
-
 export interface Serializable {
   __getSerialRepresentation(): Record<string, any>;
-}
-
-export class Text extends EngineObject implements Serializable {
-  classname = "Text";
-  text: string = "";
-  color: string = "";
-
-  constructor(x: number, y: number, text: string) {
-    super(x, y, 0, 0, null);
-    this.text = text;
-  }
-
-  paintToContext(ctx: CanvasRenderingContext2D): void {
-    const dims = ctx.measureText(this.text);
-    this.width = dims.width;
-    this.height = dims.fontBoundingBoxAscent + dims.fontBoundingBoxDescent;
-    ctx.fillText(this.text, this.x, this.y + this.height);
-  }
-
-  __getSerialRepresentation() {
-    const result = this.__getEOSerializableRepresentation();
-    const { text } = this;
-
-    return Object.assign(result, { text });
-  }
 }

@@ -8,7 +8,9 @@ import {
   useAppSelectionState,
 } from "./AppState";
 import { deserialize, doSave } from "./Document";
-import { Box, Text, Tiles } from "./engine/Engine";
+import { Tiles } from "./engine/Tiles";
+import { Text } from "./engine/Text";
+import { Box } from "./engine/Box";
 import { Camera } from "./engine/Camera";
 import { EngineObject } from "./engine/EngineObject";
 import { EngineComponent, EngineMouseEvent } from "./EngineComponent";

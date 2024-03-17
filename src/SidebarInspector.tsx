@@ -2,7 +2,7 @@ import { Tab, TabId, Tabs, useHotkeys } from "@blueprintjs/core";
 import { useCallback, useMemo, useState } from "react";
 import { selectionState, useAppSelectionState } from "./AppState";
 import { EngineState } from "./EngineState";
-import { Tiles } from "./engine/Engine";
+import { Tiles } from "./engine/Tiles";
 import { Sprite } from "./engine/Sprite";
 import { mapSet } from "./mapSet";
 

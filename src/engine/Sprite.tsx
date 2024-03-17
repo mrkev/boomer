@@ -1,13 +1,19 @@
 import { serialize } from "../Document";
-import { Tiles } from "./Engine";
+import { Tiles } from "./Tiles";
 import { EngineObject } from "./EngineObject";
+import { BoomerProp, stringRO, image as propImage } from "./BoomerProp";
 
 export class Sprite extends EngineObject {
   readonly classname = "Sprite";
 
+  override visibleProps: BoomerProp<Sprite>[] = this._props([
+    propImage<Sprite>(this, "image"),
+    stringRO<Sprite>(this, "imageUrl"),
+  ]);
+
   private constructor(
-    private image: ImageBitmap,
-    private imageUrl: string,
+    readonly image: ImageBitmap,
+    readonly imageUrl: string,
     x: number,
     y: number
   ) {

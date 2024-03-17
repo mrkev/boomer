@@ -1,5 +1,5 @@
 import { assert } from "./assert";
-import { Tiles } from "./engine/Engine";
+import { Tiles } from "./engine/Tiles";
 import { Camera } from "./engine/Camera";
 import { Sprite } from "./engine/Sprite";
 import { EngineObject } from "./engine/EngineObject";

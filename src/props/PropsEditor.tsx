@@ -1,7 +1,11 @@
-import React, { RefObject, useRef, useState } from "react";
-import { EngineObject } from "../engine/EngineObject";
-import { openObjectsState, useAppSelectionState } from "../AppState";
 import { Button, NonIdealState, Tab, TabId, Tabs } from "@blueprintjs/core";
+import React, { RefObject, useRef, useState } from "react";
+import {
+  exhaustiveSwitch,
+  openObjectsState,
+  useAppSelectionState,
+} from "../AppState";
+import { EngineObject } from "../engine/EngineObject";
 import { useLinkedState } from "../lib/LinkedState";
 import { CodeEditor } from "./CodeEditor";
 
@@ -48,66 +52,7 @@ export const PropsEditor = React.memo(function PropsEditor() {
 
   const eo = selection.eos[0];
 
-  const fields = [];
-  // Using the proxy establishes that if it's editable it's scriptable,
-  // but might want to special case id? Or are ids scriptable? could it
-  // be useful if dynamically adding objects?
-  // const proxy = eo._proxyForScripting;
-  const src = eo;
-  for (const key in src) {
-    // fields starting with "_" are hidden by default
-    if (key[0] === "_") {
-      continue;
-    }
-
-    const value = src[key as keyof EngineObject];
-
-    let display = null;
-
-    if (typeof value === "number") {
-      display = (
-        <input
-          ref={elRefs.current[key]}
-          type="number"
-          value={value}
-          onChange={(e) => {
-            const num = parseFloat(e.target.value);
-            (src as any)[key] = num;
-            update({});
-          }}
-        />
-      );
-    } else if (key === "id") {
-      display = (
-        <input
-          ref={elRefs.current[key]}
-          type="text"
-          placeholder="unidentified"
-          value={src.id || ""}
-          onChange={(e) => {
-            src.id = e.target.value;
-            update({});
-          }}
-        />
-      );
-    } else {
-      display = (
-        <input
-          ref={elRefs.current[key]}
-          type={"text"}
-          value={value instanceof Object ? "<Object>" : JSON.stringify(value)}
-          disabled
-        ></input>
-      );
-    }
-
-    fields.push(
-      <tr key={key}>
-        <td>{key}</td>
-        <td>{display}</td>
-      </tr>
-    );
-  }
+  const fields = getFieldEditors(eo, update);
 
   // useEffect(
   //   function () {
@@ -172,3 +117,88 @@ export const PropsEditor = React.memo(function PropsEditor() {
     </div>
   );
 });
+
+function getFieldEditors(eo: EngineObject, update: (v: any) => void) {
+  return eo.visibleProps.map((prop) => {
+    switch (prop.kind) {
+      case "number": {
+        const display = (
+          <input
+            // ref={elRefs.current[key]}
+            type="number"
+            value={prop.get()}
+            onChange={(e) => {
+              const num = parseFloat(e.target.value);
+              prop.set(num);
+              update({});
+            }}
+          />
+        );
+        return (
+          <tr key={prop.key}>
+            <td>{prop.key}</td>
+            <td>{display}</td>
+          </tr>
+        );
+      }
+      case "string-option": {
+        const display = (
+          <input
+            // ref={elRefs.current[key]}
+            type="text"
+            placeholder="unidentified"
+            value={prop.get() ?? ""}
+            onChange={(e) => {
+              prop.set(e.target.value);
+              update({});
+            }}
+          />
+        );
+        return (
+          <tr key={prop.key}>
+            <td>{prop.key}</td>
+            <td>{display}</td>
+          </tr>
+        );
+      }
+      case "string": {
+        const display = (
+          <input
+            type="text"
+            value={prop.get()}
+            onChange={(e) => {
+              prop.set(e.target.value);
+              update({});
+            }}
+          />
+        );
+        return (
+          <tr key={prop.key}>
+            <td>{prop.key}</td>
+            <td>{display}</td>
+          </tr>
+        );
+      }
+      case "string-readonly": {
+        const display = <input type="text" value={prop.get()} disabled />;
+        return (
+          <tr key={prop.key}>
+            <td>{prop.key}</td>
+            <td>{display}</td>
+          </tr>
+        );
+      }
+      case "image": {
+        const display = <input type="text" value={prop.get()} disabled />;
+        return (
+          <tr key={prop.key}>
+            <td>{prop.key}</td>
+            <td>{display}</td>
+          </tr>
+        );
+      }
+      default:
+        exhaustiveSwitch(prop);
+    }
+  });
+}

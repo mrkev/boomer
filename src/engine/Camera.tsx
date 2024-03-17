@@ -1,8 +1,12 @@
 import { EngineObject } from "./EngineObject";
 import { Serializable } from "./Engine";
+import { BoomerProp } from "./BoomerProp";
 
 export class Camera extends EngineObject implements Serializable {
   classname = "Camera";
+
+  override visibleProps: BoomerProp<Camera>[] = [];
+
   constructor(x: number, y: number, w: number, h: number) {
     super(x, y, w, h, null);
   }
