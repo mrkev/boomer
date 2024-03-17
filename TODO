@@ -16,6 +16,7 @@ TODO
 [ ] snap to other objects' gridlines
 [ ] ableton-like help based on cursor state and position (hover)?
 [x] camera
+[ ] tielmaps live in global assets map, sprites are [tilemapURL, number]
 
 commands:
 

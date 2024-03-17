@@ -91,6 +91,7 @@ export const hydrateFor = {
   Doc_V1: async (value: any): Promise<Doc_V1> => {
     const tiles = await hydrateFor.Tiles(value.tiles);
     const engineState = await hydrateFor.EngineState(value.engineState, tiles);
+    engineState.tilemaps.set(tiles.url, tiles);
     return new Doc_V1({ engineState, tiles });
   },
 

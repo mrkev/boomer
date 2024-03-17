@@ -1,4 +1,7 @@
 import { EngineObject } from "./EngineObject";
+import { SpriteLocation } from "./Sprite";
+
+export type BoomerPropSprite = Extract<BoomerProp<any>, { kind: "sprite" }>;
 
 export type BoomerProp<EO extends EngineObject> =
   | Readonly<{
@@ -25,7 +28,12 @@ export type BoomerProp<EO extends EngineObject> =
       get: () => string;
     }>
   | Readonly<{
-      kind: "image";
+      kind: "sprite";
+      key: keyof EO & string;
+      get: () => SpriteLocation;
+    }>
+  | Readonly<{
+      kind: "placeholder";
       key: keyof EO & string;
       get: () => string;
     }>;
@@ -77,13 +85,27 @@ export function number<EO extends EngineObject>(
   };
 }
 
-export function image<EO extends EngineObject>(
+export function sprite<EO extends EngineObject>(
   eo: EO,
   key: keyof EO & string
 ): BoomerProp<EO> {
   return {
-    kind: "image",
+    kind: "sprite",
     key: key,
-    get: (): string => "<Image>",
+    get: (): SpriteLocation => {
+      return eo[key] as any;
+    },
+  };
+}
+
+export function placeholder<EO extends EngineObject>(
+  eo: EO,
+  key: keyof EO & string,
+  value: string
+): BoomerProp<EO> {
+  return {
+    kind: "placeholder",
+    key: key,
+    get: (): string => value,
   };
 }

@@ -49,7 +49,9 @@ export default function App() {
 
   useEffect(() => {
     async function loadTiles() {
-      const tiles = await Tiles.from({ url: "/sprites.png", spriteSize: 32 });
+      const URL = "/sprites.png";
+      const tiles = await Tiles.from({ url: URL, spriteSize: 32 });
+      engineState.tilemaps.set(URL, tiles);
       setTiles(tiles);
     }
     loadTiles();
@@ -298,7 +300,7 @@ export default function App() {
 
         {/* </SplitPane> */}
       </div>
-      <PropsEditor />
+      <PropsEditor engineState={engineState} />
     </>
   );
 }

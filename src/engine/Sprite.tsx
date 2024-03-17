@@ -1,25 +1,30 @@
 import { serialize } from "../Document";
-import { Tiles } from "./Tiles";
+import { BoomerProp, placeholder, sprite } from "./BoomerProp";
 import { EngineObject } from "./EngineObject";
-import { BoomerProp, stringRO, image as propImage } from "./BoomerProp";
+import { Tiles } from "./Tiles";
+
+export type SpriteLocation = {
+  kind: "SpriteLocation";
+  tilesUrl: string;
+  num: number;
+};
 
 export class Sprite extends EngineObject {
   readonly classname = "Sprite";
 
   override visibleProps: BoomerProp<Sprite>[] = this._props([
-    propImage<Sprite>(this, "image"),
-    stringRO<Sprite>(this, "imageUrl"),
+    sprite<Sprite>(this, "tile"),
   ]);
 
   private constructor(
-    readonly image: ImageBitmap,
-    readonly imageUrl: string,
+    readonly tilemap: Tiles,
+    // readonly image: ImageBitmap,
+    readonly tile: SpriteLocation,
     x: number,
     y: number
   ) {
-    super(x, y, image.width, image.height, null);
-    this.image = image;
-    this.imageUrl = imageUrl;
+    super(x, y, tilemap.spriteSize, tilemap.spriteSize, null);
+    // this.image = image; // TODO: image is a separate kind of engine object. We allow creating images from sprites (bake as image)
   }
 
   paintToContext(ctx: CanvasRenderingContext2D) {
@@ -27,12 +32,15 @@ export class Sprite extends EngineObject {
     const x = Math.round(this.x);
     const y = Math.round(this.y);
     // const { x, y } = this;0
-    ctx.drawImage(this.image, x, y);
+    // ctx.drawImage(this.image, x, y);
+
+    this.tilemap.drawSprite(this.tile.num, [x, y], ctx);
   }
 
   __getSerialRepresentation() {
     const result = this.__getEOSerializableRepresentation();
-    const { imageUrl } = this;
+    const { tilesUrl, num } = this.tile;
+    const imageUrl = tilesUrl + "@" + num;
     result.imageUrl = imageUrl;
     return result;
   }
@@ -61,8 +69,11 @@ export class Sprite extends EngineObject {
       tilemap.spriteSize
     );
 
-    const url = tilemap.url + "@" + num;
-
-    return new Sprite(image, url, 0, 0);
+    return new Sprite(
+      tilemap,
+      { kind: "SpriteLocation", tilesUrl: tilemap.url, num },
+      0,
+      0
+    );
   }
 }

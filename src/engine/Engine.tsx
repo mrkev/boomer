@@ -1,19 +1,11 @@
-import { degVectorFromAToB, rectCenter, rectOverlap } from "../Rect";
 import Matter from "matter-js";
 import { exhaustiveSwitch } from "../AppState";
+import { degVectorFromAToB, rectCenter, rectOverlap } from "../Rect";
+import { Box } from "./Box";
 import { EngineObject } from "./EngineObject";
 import { Sprite } from "./Sprite";
-import { Box } from "./Box";
 
 // TODO: rename __getSerialRepresentation() to __getSerializableRepresentation
-
-type PropType = "number" | "string" | "boolean";
-class Prop {
-  type: PropType;
-  constructor(type: PropType) {
-    this.type = type;
-  }
-}
 
 type Paintable = Sprite | Box;
 function paint(p: Paintable) {

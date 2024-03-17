@@ -1,5 +1,5 @@
 import { Button, NonIdealState, Tab, TabId, Tabs } from "@blueprintjs/core";
-import React, { RefObject, useRef, useState } from "react";
+import React, { useState } from "react";
 import {
   exhaustiveSwitch,
   openObjectsState,
@@ -8,12 +8,22 @@ import {
 import { EngineObject } from "../engine/EngineObject";
 import { useLinkedState } from "../lib/LinkedState";
 import { CodeEditor } from "./CodeEditor";
+import { EngineState } from "../EngineState";
+import { SpriteEditor } from "./SpriteEditor";
 
-export const PropsEditor = React.memo(function PropsEditor() {
+type Subeditor = { kind: "code" } | { kind: "sprite"; editingKey: string };
+
+export const PropsEditor = React.memo(function PropsEditor({
+  engineState,
+}: {
+  engineState: EngineState;
+}) {
   const [selection] = useAppSelectionState();
   const [openObjects] = useLinkedState(openObjectsState);
-  const elRefs = useRef<Record<string, RefObject<HTMLInputElement>>>({});
   const [_selectedTab, setSelectedTab] = useState<TabId>("layers");
+  const [selectedSubeditor, setSelectedSubeditor] = useState<Subeditor>({
+    kind: "code",
+  });
 
   // const t2Ref = useRef<HTMLTableSectionElement | null>(null);
   const [_, update] = useState({});
@@ -52,7 +62,12 @@ export const PropsEditor = React.memo(function PropsEditor() {
 
   const eo = selection.eos[0];
 
-  const fields = getFieldEditors(eo, update);
+  const fields = getFieldEditors(
+    eo,
+    update,
+    selectedSubeditor,
+    setSelectedSubeditor
+  );
 
   // useEffect(
   //   function () {
@@ -87,13 +102,19 @@ export const PropsEditor = React.memo(function PropsEditor() {
           <tr key={"actions"}>
             <td>behaviour</td>
             <td>
-              <Button small icon="code" text="Edit" active />
+              <Button
+                small
+                icon="code"
+                text="Edit"
+                active={selectedSubeditor.kind === "code"}
+                onClick={() => setSelectedSubeditor({ kind: "code" })}
+              />
             </td>
           </tr>
         </tbody>
       </table>
-      <div style={{ flexGrow: 1, display: "flex", flexDirection: "column" }}>
-        <Tabs
+
+      {/* <Tabs
           id="LayersAndTiles"
           selectedTabId={selection.eos[0].id || ""}
           onChange={(id) => setSelectedTab(id)}
@@ -109,22 +130,32 @@ export const PropsEditor = React.memo(function PropsEditor() {
           })}
           <Tab key="layers" id="layers" title="Layers" />
           <Tab key="tiles" id="tiles" title="Tiles" />
-        </Tabs>
-        <div style={{ width: "100%", flexGrow: 1 }}>
-          <CodeEditor engineObject={eo} />
-        </div>
-      </div>
+        </Tabs> */}
+      {/* <div style={{ width: "100%", flexGrow: 1 }}> */}
+      {selectedSubeditor.kind === "code" && <CodeEditor engineObject={eo} />}
+      {selectedSubeditor.kind === "sprite" && (
+        <SpriteEditor
+          engineObject={eo}
+          editingKey={selectedSubeditor.editingKey}
+          engineState={engineState}
+        />
+      )}
+      {/* </div> */}
     </div>
   );
 });
 
-function getFieldEditors(eo: EngineObject, update: (v: any) => void) {
+function getFieldEditors(
+  eo: EngineObject,
+  update: (v: any) => void,
+  activeSubeditor: Subeditor,
+  selectSubeditor: (subeditor: Subeditor) => void
+) {
   return eo.visibleProps.map((prop) => {
     switch (prop.kind) {
       case "number": {
         const display = (
           <input
-            // ref={elRefs.current[key]}
             type="number"
             value={prop.get()}
             onChange={(e) => {
@@ -144,7 +175,6 @@ function getFieldEditors(eo: EngineObject, update: (v: any) => void) {
       case "string-option": {
         const display = (
           <input
-            // ref={elRefs.current[key]}
             type="text"
             placeholder="unidentified"
             value={prop.get() ?? ""}
@@ -188,7 +218,29 @@ function getFieldEditors(eo: EngineObject, update: (v: any) => void) {
           </tr>
         );
       }
-      case "image": {
+      case "sprite": {
+        const display = (
+          <Button
+            small
+            icon="clip"
+            text="Sprite..."
+            onClick={() =>
+              selectSubeditor({ kind: "sprite", editingKey: prop.key })
+            }
+            active={
+              activeSubeditor.kind === "sprite" &&
+              activeSubeditor.editingKey === prop.key
+            }
+          />
+        );
+        return (
+          <tr key={prop.key}>
+            <td>{prop.key}</td>
+            <td>{display}</td>
+          </tr>
+        );
+      }
+      case "placeholder": {
         const display = <input type="text" value={prop.get()} disabled />;
         return (
           <tr key={prop.key}>

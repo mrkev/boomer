@@ -281,9 +281,9 @@ export function EngineComponent({
       editorCamera.x -= Math.round(e.deltaX / 2);
       editorCamera.y -= Math.round(e.deltaY / 2);
     };
-    window.addEventListener("wheel", onWheel);
+    canvas.addEventListener("wheel", onWheel);
     return () => {
-      window.removeEventListener("wheel", onWheel);
+      canvas.removeEventListener("wheel", onWheel);
     };
   });
 

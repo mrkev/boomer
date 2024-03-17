@@ -1,15 +1,16 @@
-import OrderedSet from "./lib/OrderedSet";
 import {
-  Engine as MatterEngine,
   Bodies as MatterBodies,
   Composite as MatterComposite,
+  Engine as MatterEngine,
 } from "matter-js";
-import { Serializable, EOProxyForScripting } from "./engine/Engine";
-import { Camera } from "./engine/Camera";
-import { Sprite } from "./engine/Sprite";
-import { EngineObject } from "./engine/EngineObject";
 import { degVectorFromAToB, rectCenter, rectOverlap } from "./Rect";
 import { assert } from "./assert";
+import { Camera } from "./engine/Camera";
+import { EOProxyForScripting, Serializable } from "./engine/Engine";
+import { EngineObject } from "./engine/EngineObject";
+import { Sprite } from "./engine/Sprite";
+import { Tiles } from "./engine/Tiles";
+import OrderedSet from "./lib/OrderedSet";
 
 function getScriptingEnvironmentObjectsNamespace(engineState: EngineState) {
   return {
@@ -166,29 +167,15 @@ function sealed<T extends Serializable>(
 
 // @sealed
 export class EngineState implements Serializable {
-  readonly physicsEngine = MatterEngine.create({
-    gravity: { x: 0, y: 0 },
-  });
-  readonly objects = new OrderedSet<EngineObject>();
-  readonly camera: Camera;
-
-  readonly _index_UUID_eo = new Map<string, EngineObject>();
-  readonly _debug_spriteBoxes = true;
-
   constructor(camera: Camera) {
     this.camera = camera;
     (window as any).es = this;
   }
 
-  addEngineObject(eo: EngineObject) {
-    this.objects.add(eo);
-    this._index_UUID_eo.set(eo._uuid, eo);
-  }
-
-  removeEngineObject(eo: EngineObject) {
-    this.objects.delete(eo);
-    this._index_UUID_eo.delete(eo._uuid);
-  }
+  // Subengines
+  readonly physicsEngine = MatterEngine.create({
+    gravity: { x: 0, y: 0 },
+  });
 
   enablePhysicsForObject(eo: EngineObject) {
     if (!this.objects.has(eo)) {
@@ -200,6 +187,27 @@ export class EngineState implements Serializable {
     // eo.physicsBox.frictionAir = 0.5;
     MatterComposite.add(this.physicsEngine.world, eo._physicsBox);
   }
+
+  // Objects
+  readonly objects = new OrderedSet<EngineObject>();
+  readonly camera: Camera;
+
+  addEngineObject(eo: EngineObject) {
+    this.objects.add(eo);
+    this._index_UUID_eo.set(eo._uuid, eo);
+  }
+
+  removeEngineObject(eo: EngineObject) {
+    this.objects.delete(eo);
+    this._index_UUID_eo.delete(eo._uuid);
+  }
+
+  // Asssets
+  readonly tilemaps: Map<string, Tiles> = new Map();
+
+  // Indices/Debug/Serialization
+  readonly _index_UUID_eo = new Map<string, EngineObject>();
+  readonly _debug_spriteBoxes = true;
 
   __getSerialRepresentation() {
     return {
