@@ -135,6 +135,7 @@ export function useAppKeyboardEvents(
               return prev;
             }
           });
+          break;
         }
 
         case "ArrowDown": {
@@ -235,6 +236,7 @@ export function useAppKeyboardEvents(
 
           doSave(engineState, tiles);
           e.preventDefault();
+          break;
         }
 
         case "c": {

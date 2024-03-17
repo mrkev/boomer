@@ -58,7 +58,7 @@ export function useLinkedState<S>(
   );
 
   const setter = useCallback(
-    function (newVal) {
+    function (newVal: any) {
       // newVal instanceof Function
       if (newVal instanceof Function) {
         linkedState.__setLinkedValue(newVal(linkedState.__getLinkedValue()));

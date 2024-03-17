@@ -63,6 +63,8 @@ export function useAppSelectionState(): [
           break;
         case 1:
           openObjectsState.__getLinkedValue().add(newSelection[0]);
+          _setSelection({ state: "engine-object", eos: newSelection });
+          break;
         default:
           _setSelection({ state: "engine-object", eos: newSelection });
           break;

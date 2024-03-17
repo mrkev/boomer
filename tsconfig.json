@@ -1,23 +1,30 @@
 {
   "compilerOptions": {
-    "target": "ESNext",
-    "types": ["react/next", "react-dom/next"],
-    "useDefineForClassFields": true,
+    "target": "ES2015",
+    "downlevelIteration": true,
     "lib": ["DOM", "DOM.Iterable", "ESNext"],
-    "allowJs": false,
-    "skipLibCheck": false,
-    "esModuleInterop": false,
+    "allowJs": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
     "strict": true,
+    "alwaysStrict": true,
+    "noImplicitThis": true,
+    "strictFunctionTypes": true,
+    "strictNullChecks": true,
+    "strictPropertyInitialization": true,
     "forceConsistentCasingInFileNames": true,
-    "module": "ESNext",
-    "moduleResolution": "Node",
+    "noFallthroughCasesInSwitch": true,
+    "module": "esnext",
+    "moduleResolution": "node",
     "resolveJsonModule": true,
     "isolatedModules": true,
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
     "noEmit": true,
     "jsx": "react-jsx",
     "noImplicitOverride": true,
-    "experimentalDecorators": true
+    "types": ["vite/client"]
   },
-  "include": ["./src", "jest.config.js"]
+  "include": ["src", ".eslintrc.js"]
 }
