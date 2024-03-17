@@ -4,13 +4,10 @@ import {
   Bodies as MatterBodies,
   Composite as MatterComposite,
 } from "matter-js";
-import {
-  Serializable,
-  EngineObject,
-  Sprite,
-  EOProxyForScripting,
-  Camera,
-} from "./Engine";
+import { Serializable, EOProxyForScripting } from "./engine/Engine";
+import { Camera } from "./engine/Camera";
+import { Sprite } from "./engine/Sprite";
+import { EngineObject } from "./engine/EngineObject";
 import { degVectorFromAToB, rectCenter, rectOverlap } from "./Rect";
 import { assert } from "./assert";
 

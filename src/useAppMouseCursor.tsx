@@ -10,7 +10,7 @@ import {
 } from "./AppState";
 import { rectSubset } from "./Rect";
 import { useLinkedState } from "./lib/LinkedState";
-import { Camera } from "./Engine";
+import { Camera } from "./engine/Camera";
 
 export function useAppMouseCursor(
   engineState: EngineState,

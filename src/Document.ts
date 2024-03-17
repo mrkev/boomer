@@ -1,5 +1,8 @@
 import { assert } from "./assert";
-import { Camera, EngineObject, Sprite, Tiles } from "./Engine";
+import { Tiles } from "./engine/Engine";
+import { Camera } from "./engine/Camera";
+import { Sprite } from "./engine/Sprite";
+import { EngineObject } from "./engine/EngineObject";
 import { EngineState } from "./EngineState";
 
 export const doSave = (engineState: EngineState, tiles: Tiles) => {
@@ -154,7 +157,7 @@ export const hydrateFor = {
       throw new Error(`Unknown tilemap for sprite: ${url}`);
     }
 
-    const sprite = await tiles.genSprite(num);
+    const sprite = await Sprite.fromTile(tiles, num);
     // TODO: is there a way to ensure this is exhaustive?
     sprite.x = x;
     sprite.y = y;

@@ -1,14 +1,10 @@
-import React, { useCallback, useMemo, useState } from "react";
-import { Tiles, Sprite } from "./Engine";
+import { Tab, TabId, Tabs, useHotkeys } from "@blueprintjs/core";
+import { useCallback, useMemo, useState } from "react";
+import { selectionState, useAppSelectionState } from "./AppState";
 import { EngineState } from "./EngineState";
-import {
-  SelectionState,
-  selectionState,
-  useAppSelectionState,
-} from "./AppState";
+import { Tiles } from "./engine/Engine";
+import { Sprite } from "./engine/Sprite";
 import { mapSet } from "./mapSet";
-import { Tab, Tabs, TabId, useHotkeys } from "@blueprintjs/core";
-import { useLinkedState } from "./lib/LinkedState";
 
 function useSidebarInspectorHotkeys(engineState: EngineState) {
   // important: hotkeys array must be memoized to avoid infinitely re-binding hotkeys
@@ -82,7 +78,7 @@ export function SidebarInspector({
     if (!tiles) {
       return;
     }
-    const sprite = await tiles.genSprite((Math.random() * 100) >> 0);
+    const sprite = await Sprite.fromTile(tiles, (Math.random() * 100) >> 0);
     sprite.x = (Math.random() * 100) >> 0;
     sprite.y = (Math.random() * 100) >> 0;
     engineState.addEngineObject(sprite);

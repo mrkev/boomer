@@ -1,9 +1,8 @@
-import { serialize } from "./Document";
-import { degVectorFromAToB, Rect, rectCenter, rectOverlap } from "./Rect";
-import { Body as MatterBody } from "matter-js";
+import { degVectorFromAToB, rectCenter, rectOverlap } from "../Rect";
 import Matter from "matter-js";
-import { shortUUID } from "./lib/uuid";
-import { exhaustiveSwitch } from "./AppState";
+import { exhaustiveSwitch } from "../AppState";
+import { EngineObject } from "./EngineObject";
+import { Sprite } from "./Sprite";
 
 export class Tiles {
   readonly url: string;
@@ -66,26 +65,6 @@ export class Tiles {
       this.spriteSize
     );
   }
-
-  async genSprite(num: number) {
-    // const cols = this.img.width / this.spriteSize;
-    const srcX = (num * this.spriteSize) % this.img.width;
-    // const rows = this.img.height / this.spriteSize;
-    const srcY =
-      Math.floor((num * this.spriteSize) / this.img.width) * this.spriteSize;
-
-    const image = await createImageBitmap(
-      this.img,
-      srcX,
-      srcY,
-      this.spriteSize,
-      this.spriteSize
-    );
-
-    const url = this.url + "@" + num;
-
-    return new Sprite(image, url, 0, 0);
-  }
 }
 
 // TODO: rename __getSerialRepresentation() to __getSerializableRepresentation
@@ -126,58 +105,6 @@ function paint(p: Paintable) {
 
     default:
       exhaustiveSwitch(cn);
-  }
-}
-
-export abstract class EngineObject {
-  abstract classname: string;
-  _uuid: string;
-  _physicsBox: MatterBody | null;
-  id: null | string;
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-
-  constructor(
-    x: number,
-    y: number,
-    width: number,
-    height: number,
-    id: null | string
-  ) {
-    this._uuid = shortUUID();
-    this._physicsBox = null;
-    this.x = x;
-    this.y = y;
-    this.width = width;
-    this.height = height;
-    this.id = id;
-  }
-
-  abstract paintToContext(ctx: CanvasRenderingContext2D): void;
-
-  getRect(): Rect {
-    return [this.x, this.y, this.width, this.height];
-  }
-
-  // For scripting
-  _proxyForScripting = new EOProxyForScripting(this);
-  _script: string = "this.onClick(() => { this.x = 0; });";
-
-  __getEOSerializableRepresentation(): Record<string, any> {
-    const result: Record<string, any> = {};
-    for (const key in this) {
-      if (
-        typeof this[key] === "string" ||
-        typeof this[key] === "number" ||
-        typeof this[key] === "boolean"
-      )
-        result[key] = this[key];
-    }
-
-    console.log("serial rep", result);
-    return result;
   }
 }
 
@@ -395,58 +322,5 @@ export class Text extends EngineObject implements Serializable {
     const { text } = this;
 
     return Object.assign(result, { text });
-  }
-}
-
-export class Sprite extends EngineObject {
-  readonly classname = "Sprite";
-  private image: ImageBitmap;
-  private imageUrl: string;
-
-  constructor(image: ImageBitmap, imageUrl: string, x: number, y: number) {
-    super(x, y, image.width, image.height, null);
-    this.image = image;
-    this.imageUrl = imageUrl;
-  }
-
-  paintToContext(ctx: CanvasRenderingContext2D) {
-    // pixel-perfect
-    const x = Math.round(this.x);
-    const y = Math.round(this.y);
-    // const { x, y } = this;0
-    ctx.drawImage(this.image, x, y);
-  }
-
-  __getSerialRepresentation() {
-    const result = this.__getEOSerializableRepresentation();
-    const { imageUrl } = this;
-    result.imageUrl = imageUrl;
-
-    return result;
-  }
-
-  toClipboardData(): ClipboardItem {
-    const str = serialize(this);
-    const bytes = new TextEncoder().encode(str);
-    const type = "text/plain";
-    const blob = new Blob([bytes], { type });
-    return new ClipboardItem({ [type]: blob });
-  }
-}
-
-export class Camera extends EngineObject implements Serializable {
-  classname = "Camera";
-  constructor(x: number, y: number, w: number, h: number) {
-    super(x, y, w, h, null);
-  }
-
-  paintToContext(_ctx: CanvasRenderingContext2D): void {
-    // noop, though maybe change outline painting here if I
-    // can make it not paint on editing mode
-  }
-
-  __getSerialRepresentation(): Record<string, any> {
-    const { x, y, width, height } = this;
-    return { x, y, w: width, h: height };
   }
 }

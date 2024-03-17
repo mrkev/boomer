@@ -1,10 +1,9 @@
-import React, { RefObject, useEffect, useRef, useState } from "react";
-import Editor, { BeforeMount, OnChange, OnMount } from "@monaco-editor/react";
-import { EngineObject } from "./Engine";
-import { editor } from "monaco-editor";
-import { openObjectsState, useAppSelectionState } from "./AppState";
-import { NonIdealState, Tab, TabId, Tabs } from "@blueprintjs/core";
-import { useLinkedState } from "./lib/LinkedState";
+import React, { RefObject, useRef, useState } from "react";
+import { EngineObject } from "../engine/EngineObject";
+import { openObjectsState, useAppSelectionState } from "../AppState";
+import { Button, NonIdealState, Tab, TabId, Tabs } from "@blueprintjs/core";
+import { useLinkedState } from "../lib/LinkedState";
+import { CodeEditor } from "./CodeEditor";
 
 export const PropsEditor = React.memo(function PropsEditor() {
   const [selection] = useAppSelectionState();
@@ -128,14 +127,6 @@ export const PropsEditor = React.memo(function PropsEditor() {
   // );
 
   return (
-    // <SplitPane
-    //   split="vertical"
-    //   defaultSize="50%"
-    //   resizerStyle={{
-    //     background: "green",
-    //     minWidth: "10px",
-    //   }}
-    // >
     <div
       style={{
         // background: "red",
@@ -145,6 +136,17 @@ export const PropsEditor = React.memo(function PropsEditor() {
         flexGrow: 0,
       }}
     >
+      <table style={{ width: 200, alignSelf: "flex-start" }}>
+        <tbody>
+          {fields}
+          <tr key={"actions"}>
+            <td>behaviour</td>
+            <td>
+              <Button small icon="code" text="Edit" active />
+            </td>
+          </tr>
+        </tbody>
+      </table>
       <div style={{ flexGrow: 1, display: "flex", flexDirection: "column" }}>
         <Tabs
           id="LayersAndTiles"
@@ -167,76 +169,6 @@ export const PropsEditor = React.memo(function PropsEditor() {
           <CodeEditor engineObject={eo} />
         </div>
       </div>
-
-      <table style={{ width: 200, alignSelf: "flex-start" }}>
-        <tbody>{fields}</tbody>
-      </table>
     </div>
-    // </SplitPane>
   );
 });
-
-function CodeEditor({ engineObject: eo }: { engineObject: EngineObject }) {
-  const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
-
-  useEffect(() => {
-    if (!editorRef.current) {
-      return;
-    }
-
-    editorRef.current.setValue(eo._script);
-  }, [eo._script]);
-
-  const handleEditorWillMount: BeforeMount = function (monaco) {
-    console.log("AAAAAAa");
-
-    monaco.editor.create;
-    const compilerOptions = Object.assign(
-      {},
-      monaco.languages.typescript.javascriptDefaults.getCompilerOptions(),
-      {
-        lib: ["es6"],
-      }
-    );
-
-    monaco.languages.typescript.javascriptDefaults.setCompilerOptions(
-      compilerOptions
-    );
-
-    // monaco.languages.typescript.javascriptDefaults.setCompilerOptions({})
-
-    monaco.languages.typescript.javascriptDefaults.addExtraLib(
-      `
-    /** the frame */
-    declare const frame: {width: number, height: number};
-
-    declare const me: {todo: number}
-    `,
-      "frame.d.ts"
-    );
-  };
-
-  const handleEditorDidMount: OnMount = function (editor) {
-    // here is the editor instance
-    // you can store it in `useRef` for further usage
-    editorRef.current = editor;
-  };
-
-  const handleEditorChange: OnChange = (value) => {
-    eo._script = value || "";
-  };
-
-  return (
-    <Editor
-      options={{ minimap: { enabled: false }, tabSize: 2, insertSpaces: true }}
-      width="100%"
-      theme="vs-dark"
-      height="100%"
-      defaultLanguage="javascript"
-      defaultValue={eo._script}
-      beforeMount={handleEditorWillMount}
-      onMount={handleEditorDidMount}
-      onChange={handleEditorChange}
-    />
-  );
-}

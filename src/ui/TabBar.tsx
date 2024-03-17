@@ -1,17 +1,19 @@
-import { CSSProperties, useState } from "react";
+import { CSSProperties } from "react";
 
 type Tab = {
   title: string;
   id: string;
 };
 
-type Props = {
+export function TabBar({
+  selectedTab,
+  onTabChange,
+  tabs,
+}: {
   tabs: Tab[];
   onTabChange: (id: string) => void;
   selectedTab: string;
-};
-
-export function TabBar({ selectedTab, onTabChange, tabs }: Props) {
+}) {
   return (
     <div>
       {tabs.map((tab) => {

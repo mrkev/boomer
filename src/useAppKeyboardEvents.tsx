@@ -1,5 +1,7 @@
 import { useEffect } from "react";
-import { Camera, Sprite, Tiles } from "./Engine";
+import { Tiles } from "./engine/Engine";
+import { Camera } from "./engine/Camera";
+import { Sprite } from "./engine/Sprite";
 import { EngineState } from "./EngineState";
 import { useAtom } from "jotai";
 import { modeState, selectionState } from "./AppState";

@@ -8,10 +8,12 @@ import {
   useAppSelectionState,
 } from "./AppState";
 import { deserialize, doSave } from "./Document";
-import { Box, Camera, EngineObject, Text, Tiles } from "./Engine";
+import { Box, Text, Tiles } from "./engine/Engine";
+import { Camera } from "./engine/Camera";
+import { EngineObject } from "./engine/EngineObject";
 import { EngineComponent, EngineMouseEvent } from "./EngineComponent";
 import { EngineState } from "./EngineState";
-import { PropsEditor } from "./PropsEditor";
+import { PropsEditor } from "./props/PropsEditor";
 import { Rect, minSpanningRect } from "./Rect";
 import { SidebarInspector } from "./SidebarInspector";
 import { useLinkedState } from "./lib/LinkedState";

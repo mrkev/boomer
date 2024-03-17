@@ -5,7 +5,9 @@ import React, {
   useRef,
   useState,
 } from "react";
-import { EOProxyForScripting, EngineObject, Camera } from "./Engine";
+import { EOProxyForScripting } from "./engine/Engine";
+import { Camera } from "./engine/Camera";
+import { EngineObject } from "./engine/EngineObject";
 import { EngineState, Engine } from "./EngineState";
 import { useGlobalPressedKeySet } from "./useAppKeyboardEvents";
 import { Engine as MatterEngine } from "matter-js";
@@ -276,8 +278,8 @@ export function EngineComponent({
         return;
       }
 
-      editorCamera.x -= e.deltaX / 2;
-      editorCamera.y -= e.deltaY / 2;
+      editorCamera.x -= Math.round(e.deltaX / 2);
+      editorCamera.y -= Math.round(e.deltaY / 2);
     };
     window.addEventListener("wheel", onWheel);
     return () => {
