@@ -1,24 +1,22 @@
+import { Button, ButtonGroup, Divider } from "@blueprintjs/core";
 import React, { useEffect, useRef, useState } from "react";
-
 import "./App.css";
-import { Tiles, EngineObject, Text, Box, Camera } from "./Engine";
-import { EngineState } from "./EngineState";
-import { EngineComponent, EngineMouseEvent } from "./EngineComponent";
-import { useAtom } from "jotai";
 import {
   cursorState,
   exhaustiveSwitch,
   modeState,
   useAppSelectionState,
 } from "./AppState";
-import { useAppMouseCursor } from "./useAppMouseCursor";
-import { useAppKeyboardEvents } from "./useAppKeyboardEvents";
 import { deserialize, doSave } from "./Document";
-import { minSpanningRect, Rect } from "./Rect";
+import { Box, Camera, EngineObject, Text, Tiles } from "./Engine";
+import { EngineComponent, EngineMouseEvent } from "./EngineComponent";
+import { EngineState } from "./EngineState";
 import { PropsEditor } from "./PropsEditor";
-import { Button, ButtonGroup, Divider } from "@blueprintjs/core";
-import { useLinkedState } from "./lib/LinkedState";
+import { Rect, minSpanningRect } from "./Rect";
 import { SidebarInspector } from "./SidebarInspector";
+import { useLinkedState } from "./lib/LinkedState";
+import { useAppKeyboardEvents } from "./useAppKeyboardEvents";
+import { useAppMouseCursor } from "./useAppMouseCursor";
 
 const CANVAS_SIZE: [number, number] = [300, 200];
 const CAMERA_SIZE: [number, number] = [300, 200];
