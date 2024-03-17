@@ -32,7 +32,7 @@ export default function App() {
   const [editorCamera] = useState(
     new Camera(0, 0, CAMERA_SIZE[0], CAMERA_SIZE[1])
   );
-  const [mode, setMode] = useAtom(modeState);
+  const [mode, setMode] = useLinkedState(modeState);
   const [cursor, setCursor] = useLinkedState(cursorState);
 
   useEffect(() => {

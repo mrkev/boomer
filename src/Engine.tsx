@@ -3,6 +3,7 @@ import { degVectorFromAToB, Rect, rectCenter, rectOverlap } from "./Rect";
 import { Body as MatterBody } from "matter-js";
 import Matter from "matter-js";
 import { shortUUID } from "./lib/uuid";
+import { exhaustiveSwitch } from "./AppState";
 
 export class Tiles {
   readonly url: string;
@@ -89,20 +90,69 @@ export class Tiles {
 
 // TODO: rename __getSerialRepresentation() to __getSerializableRepresentation
 
-export abstract class EngineObject {
-  _uuid: string = shortUUID();
-  _physicsBox: MatterBody | null = null;
+type PropType = "number" | "string" | "boolean";
+class Prop {
+  type: PropType;
+  constructor(type: PropType) {
+    this.type = type;
+  }
+}
 
-  id: null | string = null;
+type Paintable = Sprite | Box;
+function paint(p: Paintable) {
+  const cn = p.classname;
+  switch (cn) {
+    case "Box":
+      console.log("A");
+      break;
+
+    case "Sprite":
+      console.log("A");
+      break;
+
+    default:
+      exhaustiveSwitch(cn);
+  }
+
+  const foo = p.constructor;
+  switch (cn) {
+    case "Box":
+      console.log("A");
+      break;
+
+    case "Sprite":
+      console.log("A");
+      break;
+
+    default:
+      exhaustiveSwitch(cn);
+  }
+}
+
+export abstract class EngineObject {
+  abstract classname: string;
+  _uuid: string;
+  _physicsBox: MatterBody | null;
+  id: null | string;
   x: number;
   y: number;
   width: number;
   height: number;
-  constructor(x: number, y: number, width: number, height: number) {
+
+  constructor(
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    id: null | string
+  ) {
+    this._uuid = shortUUID();
+    this._physicsBox = null;
     this.x = x;
     this.y = y;
     this.width = width;
     this.height = height;
+    this.id = id;
   }
 
   abstract paintToContext(ctx: CanvasRenderingContext2D): void;
@@ -143,9 +193,25 @@ export class EOProxyForScripting {
   #clickHandlers: Array<() => void> = [];
   #frameHandlers: Array<() => void> = [];
   #keypressHandlers: Array<(evt: ScriptingKeyEvent) => void> = [];
+  #accessor: this;
+  #reigsteredProps: Set<keyof EngineObject> = new Set();
+
+  registerProp(key: keyof EngineObject) {
+    this.#reigsteredProps.add(key);
+  }
 
   constructor(eo: EngineObject) {
     this.#eo = eo;
+
+    this.#accessor = new Proxy(this, {
+      get: function (target, key) {
+        if (target.#reigsteredProps.has(key as keyof EngineObject)) {
+          return (target.#eo as any)[key];
+        } else {
+          return (target as any)[key];
+        }
+      },
+    });
   }
 
   onClick(cb: () => void) {
@@ -273,6 +339,7 @@ export class EOProxyForScripting {
 }
 
 export class Box extends EngineObject implements Serializable {
+  readonly classname = "Box";
   color: string;
 
   constructor({
@@ -288,7 +355,7 @@ export class Box extends EngineObject implements Serializable {
     height: number;
     color?: string;
   }) {
-    super(x, y, width, height);
+    super(x, y, width, height, null);
     this.color = color;
   }
 
@@ -307,11 +374,12 @@ export interface Serializable {
 }
 
 export class Text extends EngineObject implements Serializable {
+  classname = "Text";
   text: string = "";
   color: string = "";
 
   constructor(x: number, y: number, text: string) {
-    super(x, y, 0, 0);
+    super(x, y, 0, 0, null);
     this.text = text;
   }
 
@@ -331,11 +399,12 @@ export class Text extends EngineObject implements Serializable {
 }
 
 export class Sprite extends EngineObject {
+  readonly classname = "Sprite";
   private image: ImageBitmap;
   private imageUrl: string;
 
   constructor(image: ImageBitmap, imageUrl: string, x: number, y: number) {
-    super(x, y, image.width, image.height);
+    super(x, y, image.width, image.height, null);
     this.image = image;
     this.imageUrl = imageUrl;
   }
@@ -366,8 +435,9 @@ export class Sprite extends EngineObject {
 }
 
 export class Camera extends EngineObject implements Serializable {
+  classname = "Camera";
   constructor(x: number, y: number, w: number, h: number) {
-    super(x, y, w, h);
+    super(x, y, w, h, null);
   }
 
   paintToContext(_ctx: CanvasRenderingContext2D): void {

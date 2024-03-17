@@ -75,7 +75,7 @@ export function useAppSelectionState(): [
 }
 
 type ModeState = { state: "editing" } | { state: "running" };
-export const modeState = atom<ModeState>({
+export const modeState = LinkedState.of<ModeState>({
   state: "editing",
 });
 

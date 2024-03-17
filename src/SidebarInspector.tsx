@@ -111,10 +111,6 @@ export function SidebarInspector({
               }}
             >
               {mapSet(engineState.objects, (eo, i) => {
-                if (!(eo instanceof Sprite)) {
-                  return;
-                }
-
                 const isSelected =
                   selection.state === "engine-object" &&
                   selection.eos.includes(eo);
@@ -130,7 +126,7 @@ export function SidebarInspector({
                       setEOSelection(isSelected ? [] : [eo]);
                     }}
                   >
-                    {eo.id ? eo.id : `<Sprite ${i}>`}
+                    {eo.id ? eo.id : `<Object ${i}>`}
                   </div>
                 );
               })}

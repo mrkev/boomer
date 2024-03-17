@@ -152,10 +152,16 @@ export const PropsEditor = React.memo(function PropsEditor() {
           onChange={(id) => setSelectedTab(id)}
         >
           {[...openObjects].map(function (eo, i) {
-            return <Tab id={eo.id || i} title={eo.id || "Object"}></Tab>;
+            return (
+              <Tab
+                key={eo.id || i}
+                id={eo.id || i}
+                title={eo.id || "Object"}
+              ></Tab>
+            );
           })}
-          <Tab id="layers" title="Layers" />
-          <Tab id="tiles" title="Tiles" />
+          <Tab key="layers" id="layers" title="Layers" />
+          <Tab key="tiles" id="tiles" title="Tiles" />
         </Tabs>
         <div style={{ width: "100%", flexGrow: 1 }}>
           <CodeEditor engineObject={eo} />
@@ -182,9 +188,32 @@ function CodeEditor({ engineObject: eo }: { engineObject: EngineObject }) {
   }, [eo._script]);
 
   const handleEditorWillMount: BeforeMount = function (monaco) {
-    monaco.languages.typescript.javascriptDefaults.addExtraLib(`
+    console.log("AAAAAAa");
+
+    monaco.editor.create;
+    const compilerOptions = Object.assign(
+      {},
+      monaco.languages.typescript.javascriptDefaults.getCompilerOptions(),
+      {
+        lib: ["es6"],
+      }
+    );
+
+    monaco.languages.typescript.javascriptDefaults.setCompilerOptions(
+      compilerOptions
+    );
+
+    // monaco.languages.typescript.javascriptDefaults.setCompilerOptions({})
+
+    monaco.languages.typescript.javascriptDefaults.addExtraLib(
+      `
+    /** the frame */
     declare const frame: {width: number, height: number};
-    `);
+
+    declare const me: {todo: number}
+    `,
+      "frame.d.ts"
+    );
   };
 
   const handleEditorDidMount: OnMount = function (editor) {

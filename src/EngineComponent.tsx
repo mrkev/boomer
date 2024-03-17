@@ -9,7 +9,6 @@ import { EOProxyForScripting, EngineObject, Camera } from "./Engine";
 import { EngineState, Engine } from "./EngineState";
 import { useGlobalPressedKeySet } from "./useAppKeyboardEvents";
 import { Engine as MatterEngine } from "matter-js";
-import { createLogger } from "vite";
 
 /** Pixel-perfect and scaled coordinates of mouse/pointer events */
 function getEventCanvasCoordinates(

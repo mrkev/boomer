@@ -1,8 +1,4 @@
-<<<<<<< HEAD
-import OrderedSet from "./OrderedSet";
-=======
 import OrderedSet from "./lib/OrderedSet";
->>>>>>> 9d84712 (work I guess)
 import {
   Engine as MatterEngine,
   Bodies as MatterBodies,
@@ -77,7 +73,6 @@ export class Engine {
   static commitPhysics(engineState: EngineState) {
     engineState.objects.forEach((eo) => {
       if (!eo._physicsBox) {
-        ``;
         // TODO: when not using physics, make sure there's no box, so dynamically
         // toggling this doesn't put our object soemwhere we don't expect afterwards
         return;
@@ -181,7 +176,6 @@ export class EngineState implements Serializable {
   readonly camera: Camera;
 
   readonly _index_UUID_eo = new Map<string, EngineObject>();
-
   readonly _debug_spriteBoxes = true;
 
   constructor(camera: Camera) {

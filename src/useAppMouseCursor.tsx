@@ -18,7 +18,7 @@ export function useAppMouseCursor(
 ) {
   const [cursor, setCursor] = useLinkedState(cursorState);
   const [_, setSelection] = useLinkedState(selectionState);
-  const [mode] = useAtom(modeState);
+  const [mode] = useLinkedState(modeState);
 
   useEffect(() => {
     switch (cursor.state) {

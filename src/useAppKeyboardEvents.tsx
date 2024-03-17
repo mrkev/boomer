@@ -81,7 +81,7 @@ export function useAppKeyboardEvents(
   editorCamera: Camera
 ) {
   const [selection, setSelection] = useLinkedState(selectionState);
-  const [mode] = useAtom(modeState);
+  const [mode, setMode] = useLinkedState(modeState);
 
   useEffect(() => {
     const onKeydown = async function (e: KeyboardEvent) {
@@ -120,6 +120,21 @@ export function useAppKeyboardEvents(
             setSelection({ state: "idle" });
           }
           break;
+        }
+        case "Enter": {
+          if (!cmd) {
+            return;
+          }
+
+          setMode((prev) => {
+            if (prev.state === "editing") {
+              return { state: "running" };
+            } else {
+              // we don't even hit this big switch if
+              // we're in 'running' mode actually
+              return prev;
+            }
+          });
         }
 
         case "ArrowDown": {
