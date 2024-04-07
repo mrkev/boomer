@@ -1,4 +1,4 @@
-export type Rect = [x: number, y: number, w: number, h: number];
+export type Rect = readonly [x: number, y: number, w: number, h: number];
 
 export function minSpanningRect(rects: Rect[]): Rect | null {
   if (rects.length < 1) {

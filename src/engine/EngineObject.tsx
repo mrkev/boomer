@@ -16,17 +16,6 @@ export abstract class EngineObject {
 
   abstract readonly visibleProps: BoomerProp<any>[];
 
-  protected _eovps<T extends EngineObject>(): BoomerProp<T>[] {
-    return [
-      stringRO<EngineObject>(this, "classname"),
-      stringOpt<EngineObject>(this, "id"),
-      number<EngineObject>(this, "x"),
-      number<EngineObject>(this, "y"),
-      number<EngineObject>(this, "width"),
-      number<EngineObject>(this, "height"),
-    ];
-  }
-
   protected _props<T extends EngineObject>(
     v: BoomerProp<T>[]
   ): BoomerProp<T>[] {

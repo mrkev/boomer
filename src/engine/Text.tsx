@@ -6,7 +6,7 @@ export class Text extends EngineObject implements Serializable {
   classname = "Text";
   color: string = "red";
 
-  readonly visibleProps: BoomerProp<Text>[] = this._eovps<Text>().concat([
+  readonly visibleProps: BoomerProp<Text>[] = this._props<Text>([
     string<Text>(this, "text"),
     string<Text>(this, "color"),
   ]);

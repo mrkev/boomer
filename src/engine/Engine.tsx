@@ -1,42 +1,8 @@
 import Matter from "matter-js";
-import { exhaustiveSwitch } from "../AppState";
 import { degVectorFromAToB, rectCenter, rectOverlap } from "../Rect";
-import { Box } from "./Box";
 import { EngineObject } from "./EngineObject";
-import { Sprite } from "./Sprite";
 
 // TODO: rename __getSerialRepresentation() to __getSerializableRepresentation
-
-type Paintable = Sprite | Box;
-function paint(p: Paintable) {
-  const cn = p.classname;
-  switch (cn) {
-    case "Box":
-      console.log("A");
-      break;
-
-    case "Sprite":
-      console.log("A");
-      break;
-
-    default:
-      exhaustiveSwitch(cn);
-  }
-
-  const foo = p.constructor;
-  switch (cn) {
-    case "Box":
-      console.log("A");
-      break;
-
-    case "Sprite":
-      console.log("A");
-      break;
-
-    default:
-      exhaustiveSwitch(cn);
-  }
-}
 
 type ScriptingKeyEvent = { key: string };
 
